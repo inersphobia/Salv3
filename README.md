@@ -1,0 +1,38 @@
+# Square
+
+A 27-minute timer drawn as an 81 × 81 square of lamps: 3⁸ = 6561 of them,
+one per 1/243 of a minute, filled in nested base-3 order. A 3 × 3 block is
+1/27 of a minute, 9 × 9 is twenty seconds, 27 × 27 is three minutes, and
+the full square is the session.
+
+The trimmed-down successor to [Salvation](https://github.com/inersphobia/Salvation).
+It has no build step and no dependencies: one `index.html`, a manifest and a service worker.
+
+## Use
+
+- **27 / 54 / 81** picks the length (when idle). Each 27 minutes is one
+  square; the lamps beside the readout count the squares you've finished.
+- **START / PAUSE / RESUME**. When the session finishes, a bell rings and
+  overtime counts up in amber.
+- **RESET** closes the session and asks for a verdict: **T** and **P**,
+  each − / 0 / +, plus an optional note. SKIP saves it unrated; BACK
+  returns to the paused timer. Anything under a minute is discarded.
+- **SCORE** shows today, this week and this month, with history by
+  day, week or month. A session scores T + P, and a period's score is the
+  sum of its sessions. Tap a row to see its sessions. EXPORT downloads
+  everything as JSON.
+
+The readout is base 3: three places for the minute within the current
+square, a colon, then four places for thirds, ninths, 27ths and 81sts of a
+minute. Each digit is two lamps: none lit is 0, one is 1, two is 2.
+
+## Install
+
+Serve the folder (GitHub Pages works), open it on the phone, then use
+*Add to Home Screen* (Safari's Share menu, or Chrome's ⋮ menu).
+
+## Data
+
+Everything stays in the browser's `localStorage`. On first launch, sessions
+from the old Salvation app are imported when both apps share an origin
+(e.g. both on `inersphobia.github.io`). The old data is only read, never changed.

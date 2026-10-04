@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Square">
+<meta name="theme-color" content="#000000">
+<title>Square</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root { --amber: #ffb14a; --cool: #6aa8ff; --dim: rgba(168,184,205,0.55); --line: rgba(255,255,255,0.12); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: #c7d3da; overflow: hidden;
+    font-family: ui-monospace, Menlo, Consolas, monospace; touch-action: manipulation; }
+  /* The canvas is sized by layout, never by a number read from the
+     window. Whatever the browser reports during launch or rotation,
+     the element fills its box; the frame loop matches its pixels to it. */
+  body { display: flex; flex-direction: column; height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+  main { flex: 1; position: relative; min-height: 0; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  footer { display: flex; gap: 8px; justify-content: center;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  button { font: 600 15px system-ui, sans-serif; color: #fff; border: 0; border-radius: 8px;
+    min-height: 48px; padding: 0 14px; cursor: pointer; }
+  button:disabled { opacity: 0.35; }
+  #bMode { background: #2a3442; min-width: 56px; }
+  #bPlay { background: #0074ff; min-width: 110px; }
+  #bReset { background: #e03131; }
+  #bScore { background: #a9843e; color: #1d1608; }
+
+  .card { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6); z-index: 10; padding: 16px; }
+  .card.on { display: flex; }
+  .box { width: min(340px, 100%); background: #0a0f14; border: 1.5px solid rgba(255,170,60,0.55);
+    border-radius: 12px; padding: 14px; }
+  .title { color: rgba(255,190,90,0.9); font: bold 12px monospace; letter-spacing: 2px;
+    text-align: center; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .row > span { color: #ffc478; font: bold 16px monospace; width: 18px; }
+  .tern { display: flex; gap: 8px; flex: 1; }
+  .tern button { flex: 1; min-height: 44px; font: bold 18px monospace; background: #10141c;
+    color: var(--dim); border: 1px solid rgba(0,191,255,0.25); }
+  .tern button.on { color: #ffc478; border-color: rgba(255,170,60,0.85); background: #241d10; }
+  textarea { width: 100%; background: #000; color: #c7d3da; border: 1px solid rgba(0,191,255,0.35);
+    border-radius: 8px; font: 14px monospace; padding: 8px; resize: none; margin: 4px 0 10px; }
+  .acts { display: flex; gap: 8px; justify-content: flex-end; }
+  .acts button { background: #555; }
+  .acts .go { background: #a9843e; color: #1d1608; }
+
+  /* SCORE */
+  #score { position: fixed; inset: 0; z-index: 10; background: #05070a; display: none;
+    flex-direction: column; padding: env(safe-area-inset-top) 0 0; }
+  #score.on { display: flex; }
+  .sHead { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 4px; }
+  .sHead b { letter-spacing: 3px; color: rgba(255,190,90,0.9); font-size: 13px; }
+  .sHead button { background: #2a3442; min-height: 40px; }
+  .now { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 16px; }
+  .now div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 6px; text-align: center; }
+  .now small { display: block; font-size: 10px; letter-spacing: 2px; color: var(--dim); }
+  .now strong { display: block; font-size: 30px; margin: 4px 0 2px; }
+  .now em { font-style: normal; font-size: 11px; color: var(--dim); }
+  .tabs { display: flex; gap: 6px; padding: 8px 16px; }
+  .tabs button { flex: 1; min-height: 38px; background: #10141c; color: var(--dim);
+    border: 1px solid rgba(0,191,255,0.25); font: bold 12px monospace; letter-spacing: 2px; }
+  .tabs button.on { color: #ffc478; border-color: rgba(255,170,60,0.85); background: #241d10; }
+  #list { flex: 1; overflow-y: auto; padding: 0 16px calc(16px + env(safe-area-inset-bottom)); }
+  .per { border-bottom: 1px solid var(--line); padding: 10px 0; cursor: pointer; }
+  .pTop { display: flex; align-items: baseline; gap: 10px; }
+  .pTop .lab { flex: 1; }
+  .pTop .net { font-size: 20px; font-weight: bold; min-width: 44px; text-align: right; }
+  .pSub { font-size: 11px; color: var(--dim); margin-top: 3px; display: flex; gap: 12px; }
+  .bar { position: relative; height: 4px; background: #11161d; border-radius: 2px; margin-top: 6px; }
+  .bar i { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+  .bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #333; }
+  .sess { display: none; margin-top: 8px; }
+  .per.open .sess { display: block; }
+  .s1 { display: flex; gap: 10px; align-items: center; font-size: 12px; padding: 4px 0; color: #9fb0bf; }
+  .s1 .tm { width: 44px; } .s1 .mn { width: 44px; color: var(--dim); }
+  .s1 .note { flex-basis: 100%; color: var(--dim); font-size: 11px; padding-left: 54px; margin-top: -2px; }
+  .s1 { flex-wrap: wrap; }
+  .pip { display: inline-block; width: 22px; text-align: center; border-radius: 4px; font-weight: bold; }
+  .pos { color: var(--amber); } .neg { color: var(--cool); } .zer { color: #6b7684; }
+  .empty { color: var(--dim); text-align: center; padding: 30px 0; font-size: 12px; }
+  .foot { text-align: center; padding: 16px 0 4px; }
+  .foot button { background: transparent; color: var(--dim); font: 11px monospace; letter-spacing: 2px;
+    min-height: 32px; border: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<main><canvas id="cv"></canvas></main>
+<footer>
+  <button id="bMode">27</button>
+  <button id="bPlay">START</button>
+  <button id="bReset">RESET</button>
+  <button id="bScore">SCORE</button>
+</footer>
+
+<div class="card" id="verdict"><div class="box">
+  <div class="title">THE SESSION CLOSES</div>
+  <div class="row"><span>T</span><div class="tern" data-k="t">
+    <button data-s="-1">&#8722;</button><button data-s="0">0</button><button data-s="1">+</button></div></div>
+  <div class="row"><span>P</span><div class="tern" data-k="p">
+    <button data-s="-1">&#8722;</button><button data-s="0">0</button><button data-s="1">+</button></div></div>
+  <textarea id="vNote" rows="2" maxlength="200" placeholder="a note, if you want one"></textarea>
+  <div class="acts">
+    <button id="vBack">BACK</button><button id="vSkip">SKIP</button><button id="vSave" class="go">SAVE</button>
+  </div>
+</div></div>
+
+<div id="score">
+  <div class="sHead"><b>SCORE</b><button id="sClose">CLOSE</button></div>
+  <div class="now" id="now"></div>
+  <div class="tabs" id="tabs">
+    <button data-g="day" class="on">DAY</button><button data-g="week">WEEK</button><button data-g="month">MONTH</button>
+  </div>
+  <div id="list"></div>
+</div>
+
+<script>
+"use strict";
+/* ---------- STORAGE ---------- */
+const K_RUN = "sq.run", K_LOG = "sq.sessions", K_MODE = "sq.mode";
+const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+// Sessions, newest first: { at, sec, t, p, n }. t/p are -1|0|1, absent if skipped.
+let log = load(K_LOG, []);
+
+// One-time import from the old Salvation app. On GitHub Pages both apps
+// live on the same origin, so its ledger is readable here; it is never written.
+if (!localStorage.getItem("sq.imported")) {
+  const old = load("salvationSessions", []);
+  const seen = new Set(log.map(s => s.at));
+  for (const o of Array.isArray(old) ? old : []) {
+    if (!o || !o.at || seen.has(o.at)) continue;
+    const s = { at: o.at, sec: o.sec > 0 ? o.sec : (o.dur || 0) * 60 };
+    if ("rt" in o) s.t = o.rt;
+    if ("rp" in o) s.p = o.rp;
+    if ("rw" in o) s.w = o.rw;   // the old W sessions: one rating, counted in the net
+    if (o.nx) s.n = o.nx;
+    log.push(s);
+  }
+  log.sort((a, b) => b.at - a.at);
+  save(K_LOG, log);
+  try { localStorage.setItem("sq.imported", "1"); } catch (e) {}
+}
+
+/* ---------- THE CLOCK ----------
+   Everything is measured on the wall clock, so a locked screen or a
+   killed page loses nothing: run = { mode, start, paused, pauseAt, rung }. */
+const BLOCK = 27 * 60;                 // one square: 27 minutes
+const UNIT = BLOCK / 6561;             // one lamp: 1/243 of a minute
+let mode = load(K_MODE, 27);
+let run = load(K_RUN, null);
+if (run && Date.now() - run.start > 12 * 3600e3) run = null;   // a stale run from yesterday
+
+const total = () => (run ? run.mode : mode) * 60;
+const elapsed = () => run ? ((run.pauseAt || Date.now()) - run.start - run.paused) / 1000 : 0;
+const isRunning = () => !!run && !run.pauseAt;
+const persist = () => { if (run) save(K_RUN, run); else localStorage.removeItem(K_RUN); };
+
+function start() {
+  unlockAudio();
+  if (!run) run = { mode, start: Date.now(), paused: 0, pauseAt: 0, rung: 0 };
+  else if (run.pauseAt) { run.paused += Date.now() - run.pauseAt; run.pauseAt = 0; }
+  persist(); wake(true); sync();
+}
+function pause() {
+  if (!isRunning()) return;
+  run.pauseAt = Date.now();
+  persist(); wake(false); sync();
+}
+function finishReset(rating) {
+  if (run && rating) {
+    const s = { at: run.start, sec: Math.round(elapsed()) };
+    if (rating.t != null) { s.t = rating.t; s.p = rating.p; }
+    if (rating.n) s.n = rating.n;
+    log.unshift(s);
+    save(K_LOG, log);
+  }
+  run = null; persist(); wake(false); sync();
+}
+
+/* ---------- BELL ---------- */
+let audio = null;
+function unlockAudio() {
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
+}
+function bell() {
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  if (!audio) return;
+  const t0 = audio.currentTime;
+  [[523.25, 0, 0.3], [659.25, 0.15, 0.4], [783.99, 0.3, 0.5]].forEach(([f, at, d]) => {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = f; o.connect(g); g.connect(audio.destination);
+    g.gain.setValueAtTime(0.0001, t0 + at);
+    g.gain.exponentialRampToValueAtTime(0.3, t0 + at + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + d);
+    o.start(t0 + at); o.stop(t0 + at + d + 0.05);
+  });
+}
+
+/* ---------- WAKE LOCK ---------- */
+let lock = null;
+async function wake(on) {
+  try {
+    if (on && !lock && navigator.wakeLock) { lock = await navigator.wakeLock.request("screen"); lock.onrelease = () => { lock = null; }; }
+    else if (!on && lock) { await lock.release(); lock = null; }
+  } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") { if (isRunning()) wake(true); dirty = true; }
+});
+
+/* ---------- THE SQUARE ----------
+   3^8 lamps, 81 on a side. One lamp per 1/243 minute, filled in nested
+   ternary order: a 3x3 is 1/27 of a minute, a 9x9 twenty seconds, a
+   27x27 three minutes, and the whole square is 27 minutes. */
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1, L = null, dirty = true, lastKey = "";
+let dimPlate = null, litPlate = null, litN = 0;
+
+// The fix for the top-left square: read the canvas's real CSS box every
+// frame and resize the backing store whenever it differs. No resize
+// event, orientation event or launch timing can leave it stale.
+function fit() {
+  const w = cv.clientWidth, h = cv.clientHeight, d = Math.min(window.devicePixelRatio || 1, 2);
+  if (!w || !h || (w === W && h === H && d === DPR)) return;
+  W = w; H = h; DPR = d;
+  cv.width = Math.round(w * d); cv.height = Math.round(h * d);
+  L = layout(); dimPlate = litPlate = null; litN = 0; dirty = true;
+}
+
+function layout() {
+  const pad = 12, readH = 84;
+  const side = Math.max(81, Math.floor(Math.min(W - 2 * pad, H - 2 * pad - readH)));
+  // the nesting is spacing, not ink: gutters at each 27, 9 and 3
+  const g27 = Math.max(2.5, side * 0.0115), g9 = Math.max(1.4, side * 0.0055), g3 = Math.max(0.8, side * 0.0028);
+  const pitch = (side - 2 * g27 - 6 * g9 - 18 * g3) / 81;
+  const y0 = Math.round(Math.max(pad, (H - side - readH) / 2));
+  return { side, pitch, g27, g9, g3, x0: Math.round((W - side) / 2), y0, textY: y0 + side + 46 };
+}
+const pos = g => g * L.pitch + Math.floor(g / 3) * L.g3 + Math.floor(g / 9) * (L.g9 - L.g3) + Math.floor(g / 27) * (L.g27 - L.g9);
+function cell(n) {
+  // n's four base-nine digits place it at four scales at once
+  let x = 0, y = 0, sz = 27;
+  for (let i = 3; i >= 0; i--) { const b = Math.floor(n / Math.pow(9, i)) % 9; x += (b % 3) * sz; y += Math.floor(b / 3) * sz; sz /= 3; }
+  return { x, y };
+}
+function plate() {
+  const c = document.createElement("canvas");
+  c.width = c.height = Math.max(2, Math.round(L.side * DPR));
+  c.getContext("2d").scale(DPR, DPR);
+  return c;
+}
+function lamps(c, from, to, color, r, ordered) {
+  const g = c.getContext("2d");
+  g.fillStyle = color; g.beginPath();
+  for (let n = from; n < to; n++) {
+    const o = ordered ? cell(n) : { x: n % 81, y: Math.floor(n / 81) };
+    const cx = pos(o.x) + L.pitch / 2, cy = pos(o.y) + L.pitch / 2;
+    g.moveTo(cx + r, cy); g.arc(cx, cy, r, 0, 2 * Math.PI);
+  }
+  g.fill();
+}
+function drawSquare(lit) {
+  if (!dimPlate) { dimPlate = plate(); lamps(dimPlate, 0, 6561, "rgba(150,180,235,0.11)", Math.max(0.7, L.pitch * 0.40), false); }
+  if (!litPlate || lit < litN) { litPlate = plate(); litN = 0; }
+  if (lit > litN) { lamps(litPlate, litN, lit, "rgba(249,246,236,0.95)", Math.max(0.8, L.pitch * 0.42), true); litN = lit; }
+  ctx.drawImage(dimPlate, L.x0, L.y0, L.side, L.side);
+  if (lit) ctx.drawImage(litPlate, L.x0, L.y0, L.side, L.side);
+}
+
+/* ---------- READOUT ----------
+   Base three: three places for the minute within the block, four for
+   the fraction (thirds down to 81sts). Each digit is two lamps. */
+function readout(el) {
+  let m = Math.floor(el / 60) % 27, ms = "";
+  for (let i = 0; i < 3; i++) { ms = (m % 3) + ms; m = Math.floor(m / 3); }
+  const f = el % 60;
+  let fs = "";
+  for (let i = 1; i <= 4; i++) fs += Math.floor(f / (60 / Math.pow(3, i))) % 3;
+  return ms + ":" + fs;
+}
+function drawLed(str, baseY, done) {
+  const s = W < 500 ? 15 : 18, gap = Math.round(s * 0.5), cw = Math.round(s * 0.45), r = s * 0.34;
+  let x = W / 2 - (6 * (s + gap) + s + cw + gap) / 2;   // seven digits, one colon
+  const cy = baseY - s;
+  for (const ch of str) {
+    if (ch === ":") {
+      for (const dy of [-s * 0.5, s * 0.5]) {
+        ctx.fillStyle = "rgba(225,238,255,0.2)"; ctx.beginPath(); ctx.arc(x + cw / 2, cy + dy, s * 0.28, 0, 7); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.beginPath(); ctx.arc(x + cw / 2, cy + dy, s * 0.135, 0, 7); ctx.fill();
+      }
+      x += cw + gap; continue;
+    }
+    for (let k = 0; k < 2; k++) {
+      const ly = cy + (k === 0 ? s * 0.55 : -s * 0.55), cx = x + s / 2;
+      if (+ch > k) {
+        ctx.fillStyle = done ? "rgba(255,177,74,0.22)" : "rgba(225,238,255,0.22)";
+        ctx.beginPath(); ctx.arc(cx, ly, r * 1.9, 0, 7); ctx.fill();
+        const lg = ctx.createRadialGradient(cx, ly, 0, cx, ly, r);
+        lg.addColorStop(0, done ? "#ffb14a" : "#fff"); lg.addColorStop(1, done ? "#b87724" : "#c8d8ec");
+        ctx.fillStyle = lg;
+      } else ctx.fillStyle = "#14181f";
+      ctx.beginPath(); ctx.arc(cx, ly, r, 0, 7); ctx.fill();
+      if (+ch <= k) { ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1; ctx.stroke(); }
+    }
+    x += s + gap;
+  }
+}
+function drawBlocks(el, y) {
+  // 27 / 54 / 81: the completed squares, standing beside the digits
+  const n = total() / BLOCK, lx = L.x0 + L.side - 6, p = 17;
+  ctx.font = "9px monospace"; ctx.textAlign = "right";
+  for (let k = 0; k < n; k++) {
+    const cy = y - k * p, on = el >= (k + 1) * BLOCK;
+    ctx.fillStyle = on ? "rgba(255,190,90,0.85)" : "rgba(168,184,205,0.35)";
+    ctx.fillText(String(27 * (k + 1)), lx - 10, cy + 3);
+    ctx.fillStyle = on ? "#ff9500" : "#141922";
+    ctx.beginPath(); ctx.arc(lx, cy, 5, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+  }
+}
+
+/* ---------- FRAME ---------- */
+function state() {
+  const el = elapsed(), T = total(), done = !!run && el >= T;
+  const e = Math.min(el, T), blk = e % BLOCK, inBlock = (blk === 0 && e > 0) ? BLOCK : blk;
+  return { el, done, lit: Math.min(6561, Math.floor(inBlock / UNIT)),
+           read: readout(done ? T - 1e-3 : e), over: done ? Math.floor(el - T) : -1 };
+}
+function check() {
+  if (run && !run.rung && elapsed() >= total()) { run.rung = 1; persist(); bell(); sync(); }
+}
+function frame() {
+  requestAnimationFrame(frame);
+  fit();
+  if (!L) return;
+  check();
+  const s = state(), key = s.lit + s.read + s.over + s.done;
+  if (!dirty && key === lastKey) return;   // nothing new to show: draw nothing
+  dirty = false; lastKey = key;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  drawSquare(s.lit);
+  drawLed(s.read, L.textY, s.done);
+  drawBlocks(Math.min(s.el, total()), L.textY - 6);
+  if (s.over >= 0) {
+    ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,149,0,0.7)";
+    ctx.fillText("+" + Math.floor(s.over / 60) + ":" + String(s.over % 60).padStart(2, "0"), W / 2, L.textY + 32);
+  }
+}
+setInterval(check, 1000);   // the bell rings even if frames are throttled
+
+/* ---------- CONTROLS ---------- */
+const $ = id => document.getElementById(id);
+function sync() {
+  const idle = !run, done = !!run && elapsed() >= total();
+  $("bMode").textContent = total() / 60;
+  $("bMode").disabled = !idle;
+  $("bPlay").textContent = done ? "DONE" : isRunning() ? "PAUSE" : idle ? "START" : "RESUME";
+  $("bPlay").disabled = done;
+  $("bReset").disabled = idle;
+  dirty = true;
+}
+$("bMode").onclick = () => { mode = mode === 27 ? 54 : mode === 54 ? 81 : 27; save(K_MODE, mode); sync(); };
+$("bPlay").onclick = () => isRunning() ? pause() : start();
+$("bReset").onclick = () => {
+  if (!run) return;
+  pause();
+  if (elapsed() < 60) return finishReset(null);   // under a minute: not a session
+  openVerdict();
+};
+$("bScore").onclick = openScore;
+
+/* ---------- VERDICT ---------- */
+let vote = { t: 0, p: 0 };
+function paintVote() {
+  for (const tern of document.querySelectorAll("#verdict .tern"))
+    for (const b of tern.children) b.classList.toggle("on", +b.dataset.s === vote[tern.dataset.k]);
+}
+for (const tern of document.querySelectorAll("#verdict .tern"))
+  for (const b of tern.children) b.onclick = () => { vote[tern.dataset.k] = +b.dataset.s; paintVote(); };
+function openVerdict() { vote = { t: 0, p: 0 }; paintVote(); $("vNote").value = ""; $("verdict").classList.add("on"); }
+const closeVerdict = () => $("verdict").classList.remove("on");
+$("vBack").onclick = closeVerdict;
+$("vSkip").onclick = () => { closeVerdict(); finishReset({}); };
+$("vSave").onclick = () => {
+  closeVerdict();
+  finishReset({ t: vote.t, p: vote.p, n: $("vNote").value.trim().replace(/\s+/g, " ") });
+};
+
+/* ---------- SCORE ----------
+   A session scores T + P, each -1, 0 or +1. A period's score is the sum
+   of its sessions. Weeks begin on Monday. */
+let gran = "day";
+const pad2 = n => String(n).padStart(2, "0");
+function periodStart(ms, g) {
+  const d = new Date(ms); d.setHours(0, 0, 0, 0);
+  if (g === "week") d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  if (g === "month") d.setDate(1);
+  return d.getTime();
+}
+function periodLabel(t, g) {
+  const d = new Date(t);
+  if (g === "month") return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const s = d.toLocaleDateString(undefined, { weekday: g === "day" ? "short" : undefined, day: "numeric", month: "short" });
+  return g === "week" ? "Week of " + s : s;
+}
+const net = s => (s.t || 0) + (s.p || 0) + (s.w || 0);
+function sum(list) {
+  const a = { n: list.length, sec: 0, t: 0, p: 0, w: 0, hasW: false, net: 0 };
+  for (const s of list) { a.sec += s.sec || 0; a.t += s.t || 0; a.p += s.p || 0; a.w += s.w || 0; if (s.w != null) a.hasW = true; a.net += net(s); }
+  return a;
+}
+const signed = v => v > 0 ? "+" + v : v < 0 ? "−" + -v : "0";
+const tone = v => v > 0 ? "pos" : v < 0 ? "neg" : "zer";
+const hm = sec => { const m = Math.round(sec / 60); return m < 60 ? m + "m" : Math.floor(m / 60) + "h " + pad2(m % 60) + "m"; };
+const pip = (v, lab) => `<span class="pip ${v == null ? "zer" : tone(v)}">${lab}${v == null ? "·" : signed(v)}</span>`;
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function renderScore() {
+  const now = Date.now();
+  $("now").innerHTML = [["TODAY", "day"], ["WEEK", "week"], ["MONTH", "month"]].map(([lab, g]) => {
+    const a = sum(log.filter(s => periodStart(s.at, g) === periodStart(now, g)));
+    return `<div><small>${lab}</small><strong class="${tone(a.net)}">${signed(a.net)}</strong>` +
+           `<em>${a.n} · ${hm(a.sec)}</em></div>`;
+  }).join("");
+
+  const groups = new Map([[periodStart(now, gran), []]]);
+  for (const s of log) {
+    const k = periodStart(s.at, gran);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(s);
+  }
+  const rows = [...groups].sort((a, b) => b[0] - a[0]).slice(0, 90);
+  const max = Math.max(1, ...rows.map(([, l]) => Math.abs(sum(l).net)));
+  $("list").innerHTML = (log.length ? rows.map(([k, l]) => {
+    const a = sum(l), w = Math.abs(a.net) / max * 50;
+    const bar = `<i style="${a.net >= 0 ? "left:50%" : "right:50%"};width:${w}%;background:${a.net >= 0 ? "var(--amber)" : "var(--cool)"}"></i>`;
+    const sess = l.map(s => {
+      const d = new Date(s.at), when = gran === "day" ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + " ";
+      const rated = s.t != null || s.w != null;
+      return `<div class="s1"><span class="tm">${when}${pad2(d.getHours())}:${pad2(d.getMinutes())}</span>` +
+             `<span class="mn">${hm(s.sec || 0)}</span>` +
+             (s.w != null ? pip(s.w, "W") : pip(rated ? s.t : null, "T") + pip(rated ? s.p : null, "P")) +
+             (s.n ? `<span class="note">${esc(s.n)}</span>` : "") + `</div>`;
+    }).join("");
+    return `<div class="per"><div class="pTop"><span class="lab">${periodLabel(k, gran)}</span>` +
+           `<span class="net ${tone(a.net)}">${signed(a.net)}</span></div>` +
+           `<div class="pSub"><span>${a.n} session${a.n === 1 ? "" : "s"}</span><span>${hm(a.sec)}</span>` +
+           `<span>T ${signed(a.t)}</span><span>P ${signed(a.p)}</span>${a.hasW ? `<span>W ${signed(a.w)}</span>` : ""}</div>` +
+           `<div class="bar">${bar}</div><div class="sess">${sess}</div></div>`;
+  }).join("") : `<div class="empty">No sessions yet. Finish one and rate it.</div>`) +
+  `<div class="foot"><button id="sExport">EXPORT</button></div>`;
+  for (const el of $("list").querySelectorAll(".per")) el.onclick = () => el.classList.toggle("open");
+  $("sExport").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(log, null, 1)], { type: "application/json" }));
+    a.download = "square-sessions-" + new Date().toISOString().slice(0, 10) + ".json";
+    a.click();
+  };
+}
+function openScore() { renderScore(); $("score").classList.add("on"); }
+$("sClose").onclick = () => $("score").classList.remove("on");
+for (const b of $("tabs").children) b.onclick = () => {
+  gran = b.dataset.g;
+  for (const c of $("tabs").children) c.classList.toggle("on", c === b);
+  renderScore();
+};
+
+/* ---------- GO ---------- */
+const qm = +new URLSearchParams(location.search).get("mode");
+if (!run && (qm === 27 || qm === 54 || qm === 81)) mode = qm;
+if (isRunning()) wake(true);
+sync();
+requestAnimationFrame(frame);
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
