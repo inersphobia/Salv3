@@ -285,11 +285,17 @@ function drawSquare(lit) {
 function readout(el) {
   let m = Math.floor(el / 60) % 27, ms = "";
   for (let i = 0; i < 3; i++) { ms = (m % 3) + ms; m = Math.floor(m / 3); }
+  return ms + ":" + frac(el);
+}
+function frac(el) {
+  // the minute's thirds, ninths, 27ths and 81sts
   const f = el % 60;
   let fs = "";
   for (let i = 1; i <= 4; i++) fs += Math.floor(f / (60 / Math.pow(3, i))) % 3;
-  return ms + ":" + fs;
+  return fs;
 }
+// overtime counts up in the same base: whole minutes, then the fraction
+const overtime = sec => "+" + Math.floor(sec / 60).toString(3) + ":" + frac(sec) + "\u2083";
 function drawLed(str, baseY, done) {
   const s = W < 500 ? 15 : 18, gap = Math.round(s * 0.5), cw = Math.round(s * 0.45), r = s * 0.34;
   let x = W / 2 - (6 * (s + gap) + s + cw + gap) / 2;   // seven digits, one colon
@@ -318,7 +324,8 @@ function drawLed(str, baseY, done) {
   }
 }
 function drawNinths(el, y) {
-  // 3, 6, ... 27: the finished squares, a row of nine beneath the digits
+  // 10, 20, 100 ... 1000 (3, 6, 9 ... 27 minutes, in base three): the
+  // finished squares, a row of nine beneath the digits
   const p = Math.min(36, L.side / 9), x0 = W / 2 - 4 * p;
   ctx.font = "9px monospace"; ctx.textAlign = "center";
   for (let k = 0; k < 9; k++) {
@@ -327,7 +334,7 @@ function drawNinths(el, y) {
     ctx.beginPath(); ctx.arc(cx, y, 5, 0, 7); ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = on ? "rgba(255,190,90,0.85)" : "rgba(168,184,205,0.35)";
-    ctx.fillText(String(3 * (k + 1)), cx, y + 18);
+    ctx.fillText((3 * (k + 1)).toString(3), cx, y + 18);
   }
 }
 
@@ -336,7 +343,7 @@ function state() {
   const el = elapsed(), T = TOTAL, done = !!run && el >= T;
   const S = span(), e = Math.min(el, T), blk = e % S, inSq = (blk === 0 && e > 0) ? S : blk;
   return { el, done, lit: Math.min(6561, Math.floor(inSq / (S / 6561))),
-           read: readout(done ? T - 1e-3 : e), over: done ? Math.floor(el - T) : -1 };
+           read: readout(done ? T - 1e-3 : e), over: done ? overtime(el - T) : "" };
 }
 function check() {
   if (run && !run.rung && elapsed() >= TOTAL) { run.rung = 1; persist(); bell(); sync(); }
@@ -354,10 +361,10 @@ function frame() {
   drawSquare(s.lit);
   drawLed(s.read, L.textY, s.done);
   if (ninth) drawNinths(Math.min(s.el, TOTAL), L.textY + 26);
-  if (s.over >= 0) {
+  if (s.over) {
     ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,149,0,0.7)";
-    ctx.fillText("+" + Math.floor(s.over / 60) + ":" + String(s.over % 60).padStart(2, "0"), W / 2, L.textY + (ninth ? 72 : 32));
+    ctx.fillText(s.over, W / 2, L.textY + (ninth ? 72 : 32));
   }
 }
 setInterval(check, 1000);   // the bell rings even if frames are throttled
