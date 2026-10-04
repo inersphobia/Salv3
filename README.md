@@ -13,10 +13,12 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
 - A session is always 27 minutes.
 - **1/9** switches the square to a ninth of the session: it fills every
   3 minutes, nine times over (one lamp per 1/2187 of a minute), and a row
-  of nine lamps, 3 through 27, counts the 3-minute squares you've
+  of nine lamps labelled in base 3 (10, 20, 100 … 1000, i.e. 3 to 27
+  minutes) counts the 3-minute squares you've
   finished. It's only a view, so you can switch it mid-session.
 - **START / PAUSE / RESUME**. When the session finishes, a bell rings and
-  overtime counts up in amber.
+  overtime counts up in amber, also in base 3: `+12:2000₃` is 5 minutes
+  (12₃) and two thirds of a minute (:2000₃).
 - **RESET** closes the session and asks for a verdict: **T** and **P**,
   each − / 0 / +, plus an optional note. SKIP saves it unrated; BACK
   returns to the paused timer. Anything under a minute is discarded.
