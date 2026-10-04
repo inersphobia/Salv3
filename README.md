@@ -10,8 +10,11 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
 
 ## Use
 
-- **27 / 54 / 81** picks the length (when idle). Each 27 minutes is one
-  square; the lamps beside the readout count the squares you've finished.
+- A session is always 27 minutes.
+- **1/9** switches the square to a ninth of the session: it fills every
+  3 minutes, nine times over (one lamp per 1/2187 of a minute), and a row
+  of nine lamps, 3 through 27, counts the 3-minute squares you've
+  finished. It's only a view, so you can switch it mid-session.
 - **START / PAUSE / RESUME**. When the session finishes, a bell rings and
   overtime counts up in amber.
 - **RESET** closes the session and asks for a verdict: **T** and **P**,
