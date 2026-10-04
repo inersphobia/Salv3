@@ -11,11 +11,11 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
 ## Use
 
 - A session is always 27 minutes.
-- **1/9** switches the square to a ninth of the session: it fills every
-  3 minutes, nine times over (one lamp per 1/2187 of a minute), and a row
-  of nine lamps labelled in base 3 (10, 20, 100 … 1000, i.e. 3 to 27
-  minutes) counts the 3-minute squares you've
-  finished. It's only a view, so you can switch it mid-session.
+- **1/3** switches the square to a third of the session: 27 × 27 = 729
+  lamps, one per 1/81 of a minute (the readout's fastest digit), so it
+  fills in 9 minutes, three times over. A row of three lamps labelled in
+  base 3 (100, 200, 1000, i.e. 9, 18 and 27 minutes) counts the squares
+  you've finished. It's only a view, so you can switch it mid-session.
 - **START / PAUSE / RESUME**. When the session finishes, a bell rings and
   overtime counts up in amber, also in base 3: `+12:2000₃` is 5 minutes
   (12₃) and two thirds of a minute (:2000₃).

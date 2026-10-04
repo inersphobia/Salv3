@@ -28,8 +28,8 @@
   button { font: 600 15px system-ui, sans-serif; color: #fff; border: 0; border-radius: 8px;
     min-height: 48px; padding: 0 14px; cursor: pointer; }
   button:disabled { opacity: 0.35; }
-  #bNinth { background: #2a3442; min-width: 56px; }
-  #bNinth.on { background: #241d10; color: #ffc478; box-shadow: inset 0 0 0 1px rgba(255,170,60,0.85); }
+  #bThird { background: #2a3442; min-width: 56px; }
+  #bThird.on { background: #241d10; color: #ffc478; box-shadow: inset 0 0 0 1px rgba(255,170,60,0.85); }
   #bPlay { background: #0074ff; min-width: 110px; }
   #bReset { background: #e03131; }
   #bScore { background: #a9843e; color: #1d1608; }
@@ -95,7 +95,7 @@
 <body>
 <main><canvas id="cv"></canvas></main>
 <footer>
-  <button id="bNinth">1/9</button>
+  <button id="bThird">1/3</button>
   <button id="bPlay">START</button>
   <button id="bReset">RESET</button>
   <button id="bScore">SCORE</button>
@@ -125,7 +125,7 @@
 <script>
 "use strict";
 /* ---------- STORAGE ---------- */
-const K_RUN = "sq.run", K_LOG = "sq.sessions", K_NINTH = "sq.ninth";
+const K_RUN = "sq.run", K_LOG = "sq.sessions", K_THIRD = "sq.third";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
@@ -156,10 +156,12 @@ if (!localStorage.getItem("sq.imported")) {
    killed page loses nothing: run = { start, paused, pauseAt, rung }.
    A session is always 27 minutes. */
 const TOTAL = 27 * 60;
-// The square shows the whole session, or with 1/9 on, one ninth of it:
-// 3 minutes, filled nine times. One lamp is then 1/2187 of a minute.
-let ninth = !!load(K_NINTH, false);
-const span = () => ninth ? TOTAL / 9 : TOTAL;
+// The square shows the whole session: 81 x 81 lamps, one per 1/243 of a
+// minute. With 1/3 on it shows a third: 27 x 27 lamps, one per 1/81 of a
+// minute (the readout's fastest digit), filling in 9 minutes, three times.
+let third = !!load(K_THIRD, false);
+const grid = () => third ? 27 : 81;
+const span = () => third ? TOTAL / 3 : TOTAL;
 let run = load(K_RUN, null);
 if (run && Date.now() - run.start > 12 * 3600e3) run = null;   // a stale run from yesterday
 
@@ -223,7 +225,9 @@ document.addEventListener("visibilitychange", () => {
 /* ---------- THE SQUARE ----------
    3^8 lamps, 81 on a side. One lamp per 1/243 minute, filled in nested
    ternary order: a 3x3 is 1/27 of a minute, a 9x9 twenty seconds, a
-   27x27 three minutes, and the whole square is 27 minutes. */
+   27x27 three minutes, and the whole square is 27 minutes.
+   The 1/3 view is 3^6 lamps, 27 on a side, one per 1/81 minute: a 3x3
+   is 1/9 of a minute, a 9x9 one minute, and the square nine minutes. */
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
 let W = 0, H = 0, DPR = 1, L = null, dirty = true, lastKey = "";
 let dimPlate = null, litPlate = null, litN = 0;
@@ -242,17 +246,28 @@ function fit() {
 function layout() {
   const pad = 12, readH = 120;
   const side = Math.max(81, Math.floor(Math.min(W - 2 * pad, H - 2 * pad - readH)));
-  // the nesting is spacing, not ink: gutters at each 27, 9 and 3
-  const g27 = Math.max(2.5, side * 0.0115), g9 = Math.max(1.4, side * 0.0055), g3 = Math.max(0.8, side * 0.0028);
-  const pitch = (side - 2 * g27 - 6 * g9 - 18 * g3) / 81;
+  // the nesting is spacing, not ink: a gutter at every 3 lamps, wider at
+  // every 9, wider still at every 27. inc[k] is what the 3^k boundary adds.
+  const N = grid(), F = N === 81 ? [0.0028, 0.0055, 0.0115] : [0.008, 0.02];
+  const gap = F.map((f, i) => Math.max(0.8 * (i + 1), side * f));
+  const inc = [0, ...gap.map((g, i) => g - (i ? gap[i - 1] : 0))];
+  let used = 0;
+  for (let k = 1; k < inc.length; k++) used += (N / Math.pow(3, k) - 1) * inc[k];
   const y0 = Math.round(Math.max(pad, (H - side - readH) / 2));
-  return { side, pitch, g27, g9, g3, x0: Math.round((W - side) / 2), y0, textY: y0 + side + 46 };
+  return { side, N, inc, pitch: (side - used) / N, x0: Math.round((W - side) / 2), y0, textY: y0 + side + 46 };
 }
-const pos = g => g * L.pitch + Math.floor(g / 3) * L.g3 + Math.floor(g / 9) * (L.g9 - L.g3) + Math.floor(g / 27) * (L.g27 - L.g9);
+function pos(g) {
+  let x = g * L.pitch;
+  for (let k = 1, u = 3; k < L.inc.length; k++, u *= 3) x += Math.floor(g / u) * L.inc[k];
+  return x;
+}
 function cell(n) {
-  // n's four base-nine digits place it at four scales at once
-  let x = 0, y = 0, sz = 27;
-  for (let i = 3; i >= 0; i--) { const b = Math.floor(n / Math.pow(9, i)) % 9; x += (b % 3) * sz; y += Math.floor(b / 3) * sz; sz /= 3; }
+  // n's base-nine digits place it at every scale at once
+  let x = 0, y = 0;
+  for (let sz = L.N / 3; sz >= 1; sz /= 3) {
+    const b = Math.floor(n / (sz * sz)) % 9;
+    x += (b % 3) * sz; y += Math.floor(b / 3) * sz;
+  }
   return { x, y };
 }
 function plate() {
@@ -265,14 +280,14 @@ function lamps(c, from, to, color, r, ordered) {
   const g = c.getContext("2d");
   g.fillStyle = color; g.beginPath();
   for (let n = from; n < to; n++) {
-    const o = ordered ? cell(n) : { x: n % 81, y: Math.floor(n / 81) };
+    const o = ordered ? cell(n) : { x: n % L.N, y: Math.floor(n / L.N) };
     const cx = pos(o.x) + L.pitch / 2, cy = pos(o.y) + L.pitch / 2;
     g.moveTo(cx + r, cy); g.arc(cx, cy, r, 0, 2 * Math.PI);
   }
   g.fill();
 }
 function drawSquare(lit) {
-  if (!dimPlate) { dimPlate = plate(); lamps(dimPlate, 0, 6561, "rgba(150,180,235,0.11)", Math.max(0.7, L.pitch * 0.40), false); }
+  if (!dimPlate) { dimPlate = plate(); lamps(dimPlate, 0, L.N * L.N, "rgba(150,180,235,0.11)", Math.max(0.7, L.pitch * 0.40), false); }
   if (!litPlate || lit < litN) { litPlate = plate(); litN = 0; }
   if (lit > litN) { lamps(litPlate, litN, lit, "rgba(249,246,236,0.95)", Math.max(0.8, L.pitch * 0.42), true); litN = lit; }
   ctx.drawImage(dimPlate, L.x0, L.y0, L.side, L.side);
@@ -323,26 +338,26 @@ function drawLed(str, baseY, done) {
     x += s + gap;
   }
 }
-function drawNinths(el, y) {
-  // 10, 20, 100 ... 1000 (3, 6, 9 ... 27 minutes, in base three): the
-  // finished squares, a row of nine beneath the digits
-  const p = Math.min(36, L.side / 9), x0 = W / 2 - 4 * p;
+function drawThirds(el, y) {
+  // 100, 200, 1000 (9, 18, 27 minutes, in base three): the finished
+  // squares, a row of three beneath the digits
+  const p = Math.min(64, L.side / 3), x0 = W / 2 - p;
   ctx.font = "9px monospace"; ctx.textAlign = "center";
-  for (let k = 0; k < 9; k++) {
-    const cx = x0 + k * p, on = el >= (k + 1) * TOTAL / 9;
+  for (let k = 0; k < 3; k++) {
+    const cx = x0 + k * p, on = el >= (k + 1) * TOTAL / 3;
     ctx.fillStyle = on ? "#ff9500" : "#141922";
     ctx.beginPath(); ctx.arc(cx, y, 5, 0, 7); ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = on ? "rgba(255,190,90,0.85)" : "rgba(168,184,205,0.35)";
-    ctx.fillText((3 * (k + 1)).toString(3), cx, y + 18);
+    ctx.fillText((9 * (k + 1)).toString(3), cx, y + 18);
   }
 }
 
 /* ---------- FRAME ---------- */
 function state() {
   const el = elapsed(), T = TOTAL, done = !!run && el >= T;
-  const S = span(), e = Math.min(el, T), blk = e % S, inSq = (blk === 0 && e > 0) ? S : blk;
-  return { el, done, lit: Math.min(6561, Math.floor(inSq / (S / 6561))),
+  const S = span(), n = grid() * grid(), e = Math.min(el, T), blk = e % S, inSq = (blk === 0 && e > 0) ? S : blk;
+  return { el, done, lit: Math.min(n, Math.floor(inSq / (S / n))),
            read: readout(done ? T - 1e-3 : e), over: done ? overtime(el - T) : "" };
 }
 function check() {
@@ -353,18 +368,18 @@ function frame() {
   fit();
   if (!L) return;
   check();
-  const s = state(), key = s.lit + s.read + s.over + s.done + ninth;
+  const s = state(), key = s.lit + s.read + s.over + s.done + third;
   if (!dirty && key === lastKey) return;   // nothing new to show: draw nothing
   dirty = false; lastKey = key;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   drawSquare(s.lit);
   drawLed(s.read, L.textY, s.done);
-  if (ninth) drawNinths(Math.min(s.el, TOTAL), L.textY + 26);
+  if (third) drawThirds(Math.min(s.el, TOTAL), L.textY + 26);
   if (s.over) {
     ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,149,0,0.7)";
-    ctx.fillText(s.over, W / 2, L.textY + (ninth ? 72 : 32));
+    ctx.fillText(s.over, W / 2, L.textY + (third ? 72 : 32));
   }
 }
 setInterval(check, 1000);   // the bell rings even if frames are throttled
@@ -373,13 +388,17 @@ setInterval(check, 1000);   // the bell rings even if frames are throttled
 const $ = id => document.getElementById(id);
 function sync() {
   const idle = !run, done = !!run && elapsed() >= TOTAL;
-  $("bNinth").classList.toggle("on", ninth);
+  $("bThird").classList.toggle("on", third);
   $("bPlay").textContent = done ? "DONE" : isRunning() ? "PAUSE" : idle ? "START" : "RESUME";
   $("bPlay").disabled = done;
   $("bReset").disabled = idle;
   dirty = true;
 }
-$("bNinth").onclick = () => { ninth = !ninth; save(K_NINTH, ninth); litPlate = null; sync(); };
+$("bThird").onclick = () => {
+  third = !third; save(K_THIRD, third);
+  if (L) { L = layout(); dimPlate = litPlate = null; litN = 0; }
+  sync();
+};
 $("bPlay").onclick = () => isRunning() ? pause() : start();
 $("bReset").onclick = () => {
   if (!run) return;
