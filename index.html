@@ -370,12 +370,13 @@ function drawLed(str, baseY, done, darkNines) {
   }
 }
 function drawNines(el, y) {
-  // 100, 200, 1000 (9, 18, 27 minutes, in base three): the readout's
-  // nines place, a row of three above the square in every view
+  // 100, 200, 1000 (9, 18, 27 minutes, in base three): a row of three
+  // above the square in every view, lit only in the three-light view,
+  // where they are the nines place
   const p = Math.min(64, L.side / 3), x0 = W / 2 - p;
   ctx.font = "9px monospace"; ctx.textAlign = "center";
   for (let k = 0; k < 3; k++) {
-    const cx = x0 + k * p, on = el >= (k + 1) * TOTAL / 3;
+    const cx = x0 + k * p, on = parts() === 3 && el >= (k + 1) * TOTAL / 3;
     ctx.fillStyle = on ? "#ff9500" : "#141922";
     ctx.beginPath(); ctx.arc(cx, y, 5, 0, 7); ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
