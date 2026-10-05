@@ -33,12 +33,13 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   sum of its sessions. Tap a row to see its sessions. EXPORT downloads
   everything as JSON.
 
-The time is base 3. Above the square, three lamps labelled 100, 200 and
-1000 (9, 18 and 27 minutes) are the nines place: each lights as its nine
-minutes finish. Below the square, the readout has two places for the
-minute within the current nine (00 to 22), a colon, then four places for
-thirds, ninths, 27ths and 81sts of a minute. Each digit is two lamps: none
-lit is 0, one is 1, two is 2.
+The time is base 3. Below the square, the readout has three places for the
+minute of the session (000 to 222), a colon, then four places for thirds,
+ninths, 27ths and 81sts of a minute. Each digit is two lamps: none lit is
+0, one is 1, two is 2. Above the square, three amber lamps labelled 100,
+200 and 1000 (9, 18 and 27 minutes) light as each nine minutes finishes.
+In the three-light view they stand in for the readout's nines digit,
+which stays dark there.
 
 ## Install
 

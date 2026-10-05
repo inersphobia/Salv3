@@ -321,12 +321,13 @@ function drawSquare(lit) {
 }
 
 /* ---------- READOUT ----------
-   Base three: two places for the minute within its nine (the nines are
-   the lamps above the square), four for the fraction (thirds down to
-   81sts). Each digit is two lamps. */
+   Base three: three places for the minute of the session, four for the
+   fraction (thirds down to 81sts). Each digit is two lamps. In the
+   three-light view the nines digit stays dark: the amber lamps above
+   the square carry it there. */
 function readout(el) {
-  let m = Math.floor(el / 60) % 9, ms = "";
-  for (let i = 0; i < 2; i++) { ms = (m % 3) + ms; m = Math.floor(m / 3); }
+  let m = Math.floor(el / 60) % 27, ms = "";
+  for (let i = 0; i < 3; i++) { ms = (m % 3) + ms; m = Math.floor(m / 3); }
   return ms + ":" + frac(el);
 }
 function frac(el) {
@@ -338,12 +339,14 @@ function frac(el) {
 }
 // overtime counts up in the same base: whole minutes, then the fraction
 const overtime = sec => "+" + Math.floor(sec / 60).toString(3) + ":" + frac(sec) + "\u2083";
-function drawLed(str, baseY, done) {
+function drawLed(str, baseY, done, darkNines) {
   const s = W < 500 ? 15 : 18, gap = Math.round(s * 0.5), cw = Math.round(s * 0.45), r = s * 0.34;
   const nd = str.replace(":", "").length;               // digits; one colon
   let x = W / 2 - (nd * s + cw + nd * gap) / 2;
   const cy = baseY - s;
-  for (const ch of str) {
+  let i = -1;
+  for (let ch of str) {
+    if (ch !== ":" && ++i === 0 && darkNines) ch = "0";
     if (ch === ":") {
       for (const dy of [-s * 0.5, s * 0.5]) {
         ctx.fillStyle = "rgba(225,238,255,0.2)"; ctx.beginPath(); ctx.arc(x + cw / 2, cy + dy, s * 0.28, 0, 7); ctx.fill();
@@ -403,7 +406,7 @@ function frame() {
   ctx.clearRect(0, 0, W, H);
   drawSquare(s.lit);
   drawNines(Math.min(s.el, TOTAL), L.lampY);
-  drawLed(s.read, L.textY, s.done);
+  drawLed(s.read, L.textY, s.done, parts() === 3);
   if (s.over) {
     ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,149,0,0.7)";
