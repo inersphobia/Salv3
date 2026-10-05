@@ -39,7 +39,7 @@ minute. Each digit is two lamps: none lit is 0, one is 1, two is 2.
 
 ## Install
 
-Open **https://inersphobia.github.io/salv3/** on the phone, then use
+Open **https://inersphobia.github.io/Salv3/** on the phone, then use
 *Add to Home Screen* (Safari's Share menu, or Chrome's ⋮ menu).
 
 It is published by GitHub Pages from `main` (Settings → Pages → Deploy from a branch).

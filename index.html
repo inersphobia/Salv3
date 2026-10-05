@@ -32,6 +32,15 @@
     box-shadow: inset 0 0 0 1px rgba(255,170,60,0.85); display: flex; align-items: center; justify-content: center; }
   footer svg { width: 26px; height: 26px; fill: currentColor; }
   #bLogs { letter-spacing: 2px; }
+  /* shown only in a browser tab: the way to the real, full-screen app */
+  #inst { display: none; align-items: center; gap: 10px; margin: 0 12px; padding: 8px 10px 8px 14px;
+    border-radius: 10px; background: #241d10; box-shadow: inset 0 0 0 1px rgba(255,170,60,0.55);
+    color: #ffc478; font: 13px system-ui, sans-serif; }
+  #inst.on { display: flex; }
+  #inst span { flex: 1; }
+  #inst button { min-height: 36px; padding: 0 12px; }
+  #instGo { background: #ff9500; color: #1d1608; }
+  #instX { background: transparent; color: #ffc478; }
   /* the view key: one, two or three lights lit */
   #bView { gap: 7px; }
   #bView i { width: 9px; height: 9px; border-radius: 50%; background: #141922;
@@ -98,6 +107,7 @@
 </head>
 <body>
 <main><canvas id="cv"></canvas></main>
+<div id="inst"><span id="instMsg"></span><button id="instGo">INSTALL</button><button id="instX" aria-label="Dismiss">&#x2715;</button></div>
 <footer>
   <button id="bView" aria-label="View"><i></i><i></i><i></i></button>
   <button id="bPlay" aria-label="Start"><svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5v14l11-7z"/></svg></button>
@@ -519,6 +529,37 @@ for (const b of $("tabs").children) b.onclick = () => {
 if (isRunning()) wake(true);
 sync();
 requestAnimationFrame(frame);
+/* ---------- INSTALL ----------
+   Opened from a shortcut or a tab, the app runs inside the browser. Where
+   the browser allows it, INSTALL opens its real install dialog; elsewhere
+   a line says which menu to use. Hidden once running as an app. */
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+let instEvt = null;
+function showInstall(msg, canPrompt) {
+  if (standalone || sessionStorage.getItem("sq.instX")) return;
+  $("instMsg").textContent = msg;
+  $("instGo").style.display = canPrompt ? "" : "none";
+  $("inst").classList.add("on");
+}
+addEventListener("beforeinstallprompt", e => {
+  e.preventDefault(); instEvt = e;
+  showInstall("Install Square to open it full-screen, like an app.", true);
+});
+$("instGo").onclick = async () => {
+  if (!instEvt) return;
+  instEvt.prompt();
+  await instEvt.userChoice;
+  instEvt = null; $("inst").classList.remove("on");
+};
+$("instX").onclick = () => { try { sessionStorage.setItem("sq.instX", "1"); } catch (e) {} $("inst").classList.remove("on"); };
+addEventListener("appinstalled", () => $("inst").classList.remove("on"));
+setTimeout(() => {
+  if (instEvt) return;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  showInstall(ios ? "To install: Share \u2192 Add to Home Screen."
+                  : "To install: browser menu \u22ee \u2192 Install app (choose Install, not shortcut).", false);
+}, 4000);
+
 if ("serviceWorker" in navigator) {
   // look for a new version on every launch and every return to the app
   navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(reg => {
