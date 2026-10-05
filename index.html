@@ -519,7 +519,12 @@ for (const b of $("tabs").children) b.onclick = () => {
 if (isRunning()) wake(true);
 sync();
 requestAnimationFrame(frame);
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator) {
+  // look for a new version on every launch and every return to the app
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(reg => {
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update(); });
+  }).catch(() => {});
+}
 </script>
 </body>
 </html>
