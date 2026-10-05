@@ -546,6 +546,18 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(reg => {
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update(); });
   }).catch(() => {});
+  // When a new version takes over, show it at once instead of on the next
+  // cold start. The run lives on the wall clock in storage, so reloading
+  // loses nothing - but wait while a card or the logs are open.
+  const hadWorker = !!navigator.serviceWorker.controller;
+  let reloadDue = false;
+  const busy = () => document.querySelector(".card.on, #score.on");
+  const reloadIfIdle = () => { if (reloadDue && !busy()) location.reload(); };
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadWorker) return;   // the very first install, not an update
+    reloadDue = true; reloadIfIdle();
+  });
+  document.addEventListener("click", () => setTimeout(reloadIfIdle, 0));
 }
 </script>
 </body>
