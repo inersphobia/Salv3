@@ -267,8 +267,10 @@ function fit() {
 }
 
 function layout() {
-  const pad = 12, readH = 120;
-  const side = Math.max(81, Math.floor(Math.min(W - 2 * pad, H - 2 * pad - readH)));
+  // the same frame in every view: the three 9-minute lamps above the
+  // square, the readout (and any overtime) below it
+  const pad = 12, topH = 44, readH = 84;
+  const side = Math.max(81, Math.floor(Math.min(W - 2 * pad, H - 2 * pad - topH - readH)));
   // the nesting is spacing, not ink: a gutter at every 3 lamps, wider at
   // every 9, wider still at every 27. inc[k] is what the 3^k boundary adds.
   const N = grid(), F = N === 81 ? [0.0028, 0.0055, 0.0115] : [0.008, 0.02];
@@ -276,8 +278,9 @@ function layout() {
   const inc = [0, ...gap.map((g, i) => g - (i ? gap[i - 1] : 0))];
   let used = 0;
   for (let k = 1; k < inc.length; k++) used += (N / Math.pow(3, k) - 1) * inc[k];
-  const y0 = Math.round(Math.max(pad, (H - side - readH) / 2));
-  return { side, N, inc, pitch: (side - used) / N, x0: Math.round((W - side) / 2), y0, textY: y0 + side + 46 };
+  const y0 = Math.round(topH + Math.max(pad, (H - side - topH - readH) / 2));
+  return { side, N, inc, pitch: (side - used) / N, x0: Math.round((W - side) / 2), y0,
+           lampY: y0 - 30, textY: y0 + side + 46 };
 }
 function pos(g) {
   let x = g * L.pitch;
@@ -318,11 +321,12 @@ function drawSquare(lit) {
 }
 
 /* ---------- READOUT ----------
-   Base three: three places for the minute within the block, four for
-   the fraction (thirds down to 81sts). Each digit is two lamps. */
+   Base three: two places for the minute within its nine (the nines are
+   the lamps above the square), four for the fraction (thirds down to
+   81sts). Each digit is two lamps. */
 function readout(el) {
-  let m = Math.floor(el / 60) % 27, ms = "";
-  for (let i = 0; i < 3; i++) { ms = (m % 3) + ms; m = Math.floor(m / 3); }
+  let m = Math.floor(el / 60) % 9, ms = "";
+  for (let i = 0; i < 2; i++) { ms = (m % 3) + ms; m = Math.floor(m / 3); }
   return ms + ":" + frac(el);
 }
 function frac(el) {
@@ -336,7 +340,8 @@ function frac(el) {
 const overtime = sec => "+" + Math.floor(sec / 60).toString(3) + ":" + frac(sec) + "\u2083";
 function drawLed(str, baseY, done) {
   const s = W < 500 ? 15 : 18, gap = Math.round(s * 0.5), cw = Math.round(s * 0.45), r = s * 0.34;
-  let x = W / 2 - (6 * (s + gap) + s + cw + gap) / 2;   // seven digits, one colon
+  const nd = str.replace(":", "").length;               // digits; one colon
+  let x = W / 2 - (nd * s + cw + nd * gap) / 2;
   const cy = baseY - s;
   for (const ch of str) {
     if (ch === ":") {
@@ -361,9 +366,9 @@ function drawLed(str, baseY, done) {
     x += s + gap;
   }
 }
-function drawThirds(el, y) {
-  // 100, 200, 1000 (9, 18, 27 minutes, in base three): the finished
-  // squares, a row of three beneath the digits
+function drawNines(el, y) {
+  // 100, 200, 1000 (9, 18, 27 minutes, in base three): the readout's
+  // nines place, a row of three above the square in every view
   const p = Math.min(64, L.side / 3), x0 = W / 2 - p;
   ctx.font = "9px monospace"; ctx.textAlign = "center";
   for (let k = 0; k < 3; k++) {
@@ -397,12 +402,12 @@ function frame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   drawSquare(s.lit);
+  drawNines(Math.min(s.el, TOTAL), L.lampY);
   drawLed(s.read, L.textY, s.done);
-  if (parts() === 3) drawThirds(Math.min(s.el, TOTAL), L.textY + 26);
   if (s.over) {
     ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,149,0,0.7)";
-    ctx.fillText(s.over, W / 2, L.textY + (parts() === 3 ? 72 : 32));
+    ctx.fillText(s.over, W / 2, L.textY + 32);
   }
 }
 setInterval(check, 1000);   // the bell rings even if frames are throttled
@@ -412,7 +417,7 @@ const $ = id => document.getElementById(id);
 function sync() {
   const idle = !run, done = !!run && elapsed() >= TOTAL;
   [...$("bView").children].forEach((d, i) => d.classList.toggle("on", i <= view));
-  $("playIcon").setAttribute("d", isRunning() ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M8 5v14l11-7z");
+  $("playIcon").setAttribute("d", isRunning() && !done ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M8 5v14l11-7z");
   $("bPlay").setAttribute("aria-label", isRunning() ? "Pause" : idle ? "Start" : "Resume");
   $("bPlay").disabled = done;
   $("bReset").disabled = idle;

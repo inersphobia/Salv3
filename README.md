@@ -18,10 +18,10 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
     2.2 s); the square is the whole session.
   - **three lights:** 27 × 27 = 729 lamps, one per 1/81 of a minute (the
     readout's fastest digit), so the square fills in 9 minutes, three
-    times over. Three lamps labelled in base 3 (100, 200, 1000, i.e. 9, 18
-    and 27 minutes) count the finished squares.
+    times over.
 
-  It's only a view, so you can switch it mid-session.
+  It's only a view, so you can switch it mid-session; the frame around
+  the square is the same in all three.
 - **▶ / ❚❚** starts, pauses and resumes. When the session finishes, a bell
   rings and overtime counts up in amber, also in base 3: `+12:2000₃` is
   5 minutes (12₃) and two thirds of a minute (:2000₃).
@@ -33,9 +33,12 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   sum of its sessions. Tap a row to see its sessions. EXPORT downloads
   everything as JSON.
 
-The readout is base 3: three places for the minute of the
-session (0 to 222), a colon, then four places for thirds, ninths, 27ths and 81sts of a
-minute. Each digit is two lamps: none lit is 0, one is 1, two is 2.
+The time is base 3. Above the square, three lamps labelled 100, 200 and
+1000 (9, 18 and 27 minutes) are the nines place: each lights as its nine
+minutes finish. Below the square, the readout has two places for the
+minute within the current nine (00 to 22), a colon, then four places for
+thirds, ninths, 27ths and 81sts of a minute. Each digit is two lamps: none
+lit is 0, one is 1, two is 2.
 
 ## Install
 
