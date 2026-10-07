@@ -38,6 +38,18 @@
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); }
   #bView i.on { background: #ff9500; box-shadow: 0 0 6px rgba(255,149,0,0.8); }
 
+  /* the design menu: a key at the canvas's top left */
+  #bMenu { position: absolute; top: 10px; left: 12px; z-index: 2; min-height: 40px; width: 44px; padding: 0;
+    background: #241d10; color: #ffc478; box-shadow: inset 0 0 0 1px rgba(255,170,60,0.85);
+    display: flex; align-items: center; justify-content: center; }
+  #bMenu svg { width: 22px; height: 22px; fill: currentColor; }
+  .designs { display: flex; flex-direction: column; gap: 8px; }
+  .designs button, .tones button { background: #10141c; color: var(--dim); border: 1px solid rgba(0,191,255,0.25);
+    font: bold 14px monospace; letter-spacing: 3px; }
+  .tones { display: flex; gap: 8px; }
+  .tones button { flex: 1; }
+  #menu .title + .designs + .title { margin-top: 16px; }
+  .designs button.on, .tones button.on { color: #ffc478; border-color: rgba(255,170,60,0.85); background: #241d10; }
   .card { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
     background: rgba(0,0,0,0.6); z-index: 10; padding: 16px; }
   .card.on { display: flex; }
@@ -98,13 +110,22 @@
 </style>
 </head>
 <body>
-<main><canvas id="cv"></canvas></main>
+<main><canvas id="cv"></canvas>
+  <button id="bMenu" aria-label="Designs"><svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/></svg></button>
+</main>
 <footer>
   <button id="bView" aria-label="View"><i></i><i></i><i></i></button>
   <button id="bPlay" aria-label="Start"><svg viewBox="0 0 24 24"><path id="playIcon" d="M8 5v14l11-7z"/></svg></button>
   <button id="bReset" aria-label="Reset"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg></button>
   <button id="bLogs">LOGS</button>
 </footer>
+
+<div class="card" id="menu"><div class="box">
+  <div class="title">DESIGN</div>
+  <div class="designs"><button data-d="square">SQUARE</button><button data-d="sept">SEPT</button></div>
+  <div class="title" id="toneTitle">SEPT LIGHT</div>
+  <div class="tones" id="tones"><button data-t="white">WHITE</button><button data-t="amber">AMBER</button></div>
+</div></div>
 
 <div class="card" id="verdict"><div class="box">
   <div class="title">THE SESSION CLOSES</div>
@@ -131,9 +152,9 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v11";
+const VERSION = "v12";
 /* ---------- STORAGE ---------- */
-const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view";
+const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
@@ -373,20 +394,73 @@ function drawLed(str, baseY, done, darkNines) {
     x += s + gap;
   }
 }
-function drawNines(el, y) {
+function drawNines(el, y, lit) {
   // 100, 200, 1000 (9, 18, 27 minutes, in base three): a row of three
   // above the square in every view, lit only in the three-light view,
   // where they are the nines place
   const p = Math.min(64, L.side / 3), x0 = W / 2 - p;
   ctx.font = "9px monospace"; ctx.textAlign = "center";
   for (let k = 0; k < 3; k++) {
-    const cx = x0 + k * p, on = parts() === 3 && el >= (k + 1) * TOTAL / 3;
+    const cx = x0 + k * p, on = lit && el >= (k + 1) * TOTAL / 3;
     ctx.fillStyle = on ? "#ff9500" : "#141922";
     ctx.beginPath(); ctx.arc(cx, y, 5, 0, 7); ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = on ? "rgba(255,190,90,0.85)" : "rgba(168,184,205,0.35)";
     ctx.fillText((9 * (k + 1)).toString(3), cx, y + 18);
   }
+}
+
+/* ---------- SEPT ----------
+   A frame of triangles, each with a lamp at its three corners. The four
+   corners of the square carry the fraction of the minute - top left 1/81,
+   top right 1/27, bottom right 1/9, bottom left 1/3 - each a right
+   triangle whose right angle is the square's corner and whose long edge
+   cuts across it like a picture frame's mitre. In the middle, a reversed
+   play triangle (threes) and a play triangle (ones) face each other, and
+   on a line between them three lamps carry the nines. A digit lights its
+   corners in turn and they stay lit: one for 0, two for 1, all three
+   for 2 - then all go dark and the count starts again. */
+let design = load(K_DESIGN, "square") === "sept" ? "sept" : "square";
+// SEPT's lamps burn white until the bell, or amber the whole time
+let sepTone = load(K_TONE, "white") === "amber" ? "amber" : "white";
+function septLamp(x, y, r, on, done) {
+  if (on) {
+    const halo = done ? "255,177,74" : "225,238,255";
+    const h = ctx.createRadialGradient(x, y, r * 0.8, x, y, r * 3.2);
+    h.addColorStop(0, `rgba(${halo},0.35)`); h.addColorStop(1, `rgba(${halo},0)`);
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 7); ctx.fill();
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec");
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = "#14181f";
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  if (!on) { ctx.strokeStyle = "rgba(255,255,255,0.16)"; ctx.lineWidth = 1; ctx.stroke(); }
+}
+function drawSept(s) {
+  const S = L.side, X0 = L.x0, Y0 = L.y0, r = S * 0.026, live = !!run, done = s.done;
+  const warm = done || sepTone === "amber";
+  const line = warm ? "rgba(255,177,74,0.35)" : "rgba(150,180,235,0.30)";
+  const d = s.read.replace(":", "").split("").map(Number);   // m9 m3 m1 f3 f9 f27 f81
+  // a figure: its outline, then its corners in order, the first v+1 lit
+  const figure = (pts, v, closed) => {
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]);
+    if (closed) ctx.closePath();
+    ctx.strokeStyle = line; ctx.lineWidth = 1.5; ctx.stroke();
+    pts.forEach((p, i) => septLamp(p[0], p[1], r, live && i <= v, warm));
+  };
+  ctx.strokeStyle = "rgba(150,180,235,0.10)"; ctx.lineWidth = 1; ctx.strokeRect(X0, Y0, S, S);
+  // the corners: the square's corner first, then clockwise round the frame
+  const m = S * 0.26, i = r * 1.6, X1 = X0 + S, Y1 = Y0 + S;
+  figure([[X0 + i, Y0 + i], [X0 + m, Y0 + i], [X0 + i, Y0 + m]], d[6], true);   // 1/81
+  figure([[X1 - i, Y0 + i], [X1 - i, Y0 + m], [X1 - m, Y0 + i]], d[5], true);   // 1/27
+  figure([[X1 - i, Y1 - i], [X1 - m, Y1 - i], [X1 - i, Y1 - m]], d[4], true);   // 1/9
+  figure([[X0 + i, Y1 - i], [X0 + i, Y1 - m], [X0 + m, Y1 - i]], d[3], true);   // 1/3
+  // the middle: tip first, then clockwise; the nines from the bottom up
+  const CX = X0 + S / 2, CY = Y0 + S / 2, g = S * 0.11, hh = S * 0.16, w = S * 0.19, n9 = hh * 0.62;
+  figure([[CX - g - w, CY], [CX - g, CY - hh], [CX - g, CY + hh]], d[1], true);
+  figure([[CX + g + w, CY], [CX + g, CY + hh], [CX + g, CY - hh]], d[2], true);
+  figure([[CX, CY + n9], [CX, CY], [CX, CY - n9]], d[0], false);
 }
 
 /* ---------- FRAME ---------- */
@@ -404,14 +478,15 @@ function frame() {
   fit();
   if (!L) return;
   check();
-  const s = state(), key = s.lit + s.read + s.over + s.done + view;
+  const s = state(), key = s.lit + s.read + s.over + s.done + view + design + !!run;
   if (!dirty && key === lastKey) return;   // nothing new to show: draw nothing
   dirty = false; lastKey = key;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
-  drawSquare(s.lit);
-  drawNines(Math.min(s.el, TOTAL), L.lampY);
-  drawLed(s.read, L.textY, s.done, parts() === 3);
+  const thirdsView = design === "square" && parts() === 3;
+  if (design === "sept") drawSept(s); else drawSquare(s.lit);
+  drawNines(Math.min(s.el, TOTAL), L.lampY, thirdsView);
+  drawLed(s.read, L.textY, s.done, thirdsView);
   if (s.over) {
     ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,149,0,0.7)";
@@ -425,6 +500,10 @@ const $ = id => document.getElementById(id);
 function sync() {
   const idle = !run, done = !!run && elapsed() >= TOTAL;
   [...$("bView").children].forEach((d, i) => d.classList.toggle("on", i <= view));
+  $("bView").disabled = design !== "square";   // the views belong to the square
+  for (const b of document.querySelectorAll(".designs button")) b.classList.toggle("on", b.dataset.d === design);
+  for (const b of $("tones").children) b.classList.toggle("on", b.dataset.t === sepTone);
+  $("toneTitle").style.display = $("tones").style.display = design === "sept" ? "" : "none";
   $("playIcon").setAttribute("d", isRunning() && !done ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M8 5v14l11-7z");
   $("bPlay").setAttribute("aria-label", isRunning() ? "Pause" : idle ? "Start" : "Resume");
   $("bPlay").disabled = done;
@@ -435,6 +514,13 @@ $("bView").onclick = () => {
   view = (view + 1) % 3; save(K_VIEW, view);
   if (L) { L = layout(); dimPlate = litPlate = null; litN = 0; }
   sync();
+};
+$("bMenu").onclick = () => $("menu").classList.add("on");
+$("menu").onclick = e => { if (e.target === $("menu")) $("menu").classList.remove("on"); };
+for (const b of $("tones").children) b.onclick = () => { sepTone = b.dataset.t; save(K_TONE, sepTone); sync(); };
+for (const b of document.querySelectorAll(".designs button")) b.onclick = () => {
+  design = b.dataset.d; save(K_DESIGN, design);
+  $("menu").classList.remove("on"); sync();
 };
 $("bPlay").onclick = () => isRunning() ? pause() : start();
 $("bReset").onclick = () => {

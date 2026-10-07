@@ -11,6 +11,17 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
 ## Use
 
 - A session is always 27 minutes.
+- **☰ (top left)** picks the design: **SQUARE** (below) or **SEPT**.
+  SEPT is a frame of triangles with a lamp at each corner. The square's
+  four corners carry the fraction of the minute (top left 1/81, top right
+  1/27, bottom right 1/9, bottom left 1/3), each a right triangle whose
+  long edge cuts across the corner like a picture frame's mitre. In the
+  middle, ◀ carries the threes and ▶ the ones, and the three lamps on the
+  line between them the nines. A digit lights its corners in turn and
+  they stay lit: one for 0, two for 1, all three for 2, then they go dark
+  and start again. The view key belongs to SQUARE and is dimmed in SEPT.
+  With SEPT chosen, the menu also offers **SEPT LIGHT**: WHITE (amber only
+  once the bell has rung) or AMBER the whole time.
 - The **view key** (three small lights) cycles three views of it:
   - **one light:** 81 × 81 = 6561 lamps, one per 1/243 of a minute; the
     square is the whole session.
