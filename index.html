@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v24";
+const VERSION = "v26";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -473,6 +473,7 @@ function drawSept(s) {
    place up, and the triangle's sides are its wiring:
      fill      core -> tip         (lit while the stage holds 2)
      overflow  tip  -> next core   (lit while current flows into a lit core)
+     edge      core -> next core   (lit while a 1 passes current to a lit neighbour)
      leads     centre -> circuit   (red for a single LED, orange for a string)
    Above the nines' tip sits the 27 lamp: the nines carry into it, so at
    27:00 it lights and the seven places roll to zero, and through the
@@ -504,11 +505,21 @@ function drawStar(s, obtuse) {
   const WIRE_C = warm ? "rgba(255,177,74,0.38)" : "rgba(150,180,235,0.42)";
   const FAINT_C = warm ? "rgba(255,177,74,0.12)" : "rgba(150,180,235,0.13)";
   const LIT_C = warm ? "rgba(255,177,74,0.8)" : "rgba(225,238,255,0.7)";
+  // two neighbouring lit places are always joined: through the full
+  // spike's tip and overflow wire if it holds 2, or along the heptagon edge
+  // between their cores if it holds 1. (The nines reach the 27 lamp only
+  // through their tip: no heptagon edge runs there.)
+  const joins = k => { const nx = k === 0 ? "X" : upPlace(k); return d[k] >= 1 && val(nx) >= 1 && (d[k] === 2 || nx !== "X"); };
   for (let k = 0; k < 7; k++) {
-    wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                                   // structure
-    // overflow: lit only while current flows through it - from a full
-    // spike's tip into the next lit core. The nines carry up into the 27 lamp
-    const nx = k === 0 ? "X" : upPlace(k), conducts = d[k] === 2 && val(nx) >= 1;
+    const nx = k === 0 ? "X" : upPlace(k), j = joins(k);
+    // the heptagon edge: lit while it carries current between two cores. The
+    // nines-to-1/81 edge, and the nines' third side, are structure only: the
+    // nines carry into the 27 lamp, but the shape stays whole
+    const edge = k !== 0 && j && d[k] === 1;
+    wire(N["I" + k], N["I" + upPlace(k)], edge ? LIT_C : FAINT_C, edge ? 2.5 : 1);
+    if (k === 0) wire(N.T0, N.I6, FAINT_C, 1);
+    // overflow: lit while current flows from a full spike's tip into the next lit core
+    const conducts = j && d[k] === 2;
     wire(N["T" + k], N[core(nx)], conducts ? LIT_C : WIRE_C, conducts ? 2.5 : 1.6);
     wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);   // fill
   }
@@ -521,8 +532,8 @@ function drawStar(s, obtuse) {
   chain.forEach((k, i) => {
     const v = val(k); if (v < 1) return;
     const prev = chain[i - 1], next = chain[i + 1];
-    const first = prev === undefined || val(prev) !== 2;        // nothing feeds it from below
-    const last = next === undefined || v !== 2 || val(next) < 1; // it feeds nothing above
+    const first = prev === undefined || !joins(prev);           // nothing feeds it from below
+    const last = next === undefined || !joins(k);               // it feeds nothing above
     if (first && last && v === 1) { lone[k] = true; wire(N.C, N[core(k)], RED, 1.6); return; }
     if (first) wire(N.C, N[core(k)], ORANGE, 1.6);
     if (last) wire(N.C, N[v === 2 ? "T" + k : core(k)], ORANGE, 1.6);
