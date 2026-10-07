@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v20";
+const VERSION = "v21";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -508,12 +508,15 @@ function drawStar(s) {
   // cores joined by conducting overflow wires (a full spike's tip touching
   // the next lit core) form a string, and a string is a closed loop: one
   // line from the centre to its first core, one back from its last. The
-  // cores between are fed in series. A lone lit core is both ends: one line.
+  // cores between are fed in series. The return leaves from where the string
+  // truly ends: its last core if that spike holds 1, or the spike's tip if
+  // it holds 2 with nothing lit beyond. A lone lit core is both ends: one line.
   for (let k = 6; k >= 0; k--) {
     if (d[k] < 1) continue;
     const first = k === 6 || d[k + 1] !== 2;                    // nothing feeds it from below
     const last = k === 0 || d[k] !== 2 || d[upPlace(k)] < 1;     // it feeds nothing above
-    if (first || last) wire(N.C, N["I" + k], LIT_C, 1.4);
+    if (first) wire(N.C, N["I" + k], LIT_C, 1.4);
+    if (last) wire(N.C, N[(d[k] === 2 ? "T" : "I") + k], LIT_C, 1.4);
   }
   // the clock: a small source at the centre, wired to the 1/81 core
   ctx.setLineDash([3, 4]); wire(N.C, N.I6, live && !s.done ? ARMED_C : WIRE_C, 1.2); ctx.setLineDash([]);

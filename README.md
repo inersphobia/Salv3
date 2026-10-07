@@ -31,7 +31,8 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   the lit chain from the clock at the centre shows how far the next carry
   will reach. Lit cores joined through full spikes form a
   string, and each string is a closed loop: a line from the centre to its
-  first core and one back from its last, the cores between fed in series. At 27:00 the nines overflow
+  first core and one back from where it ends (its last core, or the tip
+  of a full spike with nothing lit beyond), the cores between fed in series. At 27:00 the nines overflow
   round to the start and the ring closes on the bell.
   The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT and
   STAR, which show the nines themselves.
