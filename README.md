@@ -29,8 +29,9 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   clockwork, every lamp moves on the tick, all at once. An overflow wire
   glows while its spike is full and every spike below it is full too, so
   the lit chain from the clock at the centre shows how far the next carry
-  will reach. At 27:00 the nines overflow round to the start and the ring
-  closes on the bell.
+  will reach. A steady hold line from the centre powers every lit core,
+  so every lit lamp traces back to the source. At 27:00 the nines overflow
+  round to the start and the ring closes on the bell.
   The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT and
   STAR, which show the nines themselves.
   With SEPT or STAR chosen, the menu also offers **LIGHT**: WHITE (amber
