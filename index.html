@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v13";
+const VERSION = "v14";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -456,9 +456,10 @@ function drawSept(s) {
   figure([[X1 - i, Y0 + i], [X1 - i, Y0 + m], [X1 - m, Y0 + i]], d[5], true);   // 1/27
   figure([[X1 - i, Y1 - i], [X1 - m, Y1 - i], [X1 - i, Y1 - m]], d[4], true);   // 1/9
   figure([[X0 + i, Y1 - i], [X0 + i, Y1 - m], [X0 + m, Y1 - i]], d[3], true);   // 1/3
-  // the middle: tip first, then clockwise; the nines from the bottom up
+  // the middle: mirror images - tip, then bottom, then top - so a digit
+  // sits at the same height in both, rising like the nines between them
   const CX = X0 + S / 2, CY = Y0 + S / 2, g = S * 0.11, hh = S * 0.16, w = S * 0.19, n9 = hh * 0.62;
-  figure([[CX - g - w, CY], [CX - g, CY - hh], [CX - g, CY + hh]], d[1], true);
+  figure([[CX - g - w, CY], [CX - g, CY + hh], [CX - g, CY - hh]], d[1], true);
   figure([[CX + g + w, CY], [CX + g, CY + hh], [CX + g, CY - hh]], d[2], true);
   figure([[CX, CY + n9], [CX, CY], [CX, CY - n9]], d[0], false);
 }
