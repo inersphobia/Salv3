@@ -25,15 +25,13 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   STAR is a synchronous base-3 counter drawn as seven linked triangles:
   nines at the top, then clockwise threes, ones, 1/3, 1/9, 1/27, 1/81. Each
   spike is one stage with two lamps, its core and its tip; its third corner
-  is the core of the next place up, joined by the overflow wire. Like
-  clockwork, every lamp moves on the tick, all at once. An overflow wire
-  glows while its spike is full and every spike below it is full too, so
-  the lit chain from the clock at the centre shows how far the next carry
-  will reach. Lit cores joined through full spikes form a
-  string, and each string is a closed loop: a line from the centre to its
-  first core and one back from where it ends (its last core, or the tip
-  of a full spike with nothing lit beyond), the cores between fed in series. At 27:00 the nines overflow
-  round to the start and the ring closes on the bell.
+  is the core of the next place up, joined by the overflow wire. Every lamp
+  moves on the tick, all at once. Only what is true now is drawn: a wire
+  lights while current flows between two lit lamps, and leads from the
+  centre close each circuit - one red lead for a single LED (which glows
+  brighter), two orange leads for a string, in at its first core and back
+  from where it ends. The centre is the source, brighter the more lamps it
+  powers.
   The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT and
   STAR, which show the nines themselves.
   With SEPT or STAR chosen, the menu also offers **LIGHT**: WHITE (amber
