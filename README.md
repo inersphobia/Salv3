@@ -11,7 +11,7 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
 ## Use
 
 - A session is always 27 minutes.
-- **☰ (top left)** picks the design: **SQUARE** (below), **SEPT** or **STAR**.
+- **☰ (top left)** picks the design: **SQUARE** (below), **SEPT**, **STAR** or **HEPTA**.
   SEPT is a frame of triangles with a lamp at each corner. The square's
   four corners carry the fraction of the minute (top left 1/81, top right
   1/27, bottom right 1/9, bottom left 1/3), each a right triangle whose
@@ -32,9 +32,12 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   brighter), two orange leads for a string, in at its first core and back
   from where it ends. The centre is the source, brighter the more lamps it
   powers.
-  The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT and
-  STAR, which show the nines themselves.
-  With SEPT or STAR chosen, the menu also offers **LIGHT**: WHITE (amber
+  HEPTA is STAR on the obtuse septagram {7/2}: the same circuit, with the
+  heptagon sized so every wire lies on one of the star's seven straight
+  lines.
+  The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT, STAR
+  and HEPTA, which show the nines themselves.
+  With SEPT, STAR or HEPTA chosen, the menu also offers **LIGHT**: WHITE (amber
   only once the bell has rung) or AMBER the whole time.
 - The **view key** (three small lights) cycles three views of it:
   - **one light:** 81 × 81 = 6561 lamps, one per 1/243 of a minute; the
