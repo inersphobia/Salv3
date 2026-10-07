@@ -406,49 +406,53 @@ function drawNines(el, y, lit) {
 }
 
 /* ---------- SEPT ----------
-   Four triangles at the corners carry the fraction of the minute: top
-   left 1/81, top right 1/27, bottom right 1/9, bottom left 1/3. One in
-   the middle carries the minute: its top third the nines, bottom left
-   the threes, bottom right the ones. Every triangle points up, and each
-   digit is a triangle of three: its top lights for 0, then its bottom
-   right joins for 1, then its bottom left for 2 - and back to the top. */
+   A frame of triangles, each with a lamp at its three corners. The four
+   corners of the square carry the fraction of the minute - top left 1/81,
+   top right 1/27, bottom right 1/9, bottom left 1/3 - each a right
+   triangle whose right angle is the square's corner and whose long edge
+   cuts across it like a picture frame's mitre. In the middle, a reversed
+   play triangle (threes) and a play triangle (ones) face each other, and
+   on a line between them three lamps carry the nines. A digit lights its
+   corners in turn and they stay lit: one for 0, two for 1, all three
+   for 2 - then all go dark and the count starts again. */
 let design = load(K_DESIGN, "square") === "sept" ? "sept" : "square";
-const R3 = Math.sqrt(3) / 2;
-function tri(cx, top, w) { return [[cx, top], [cx + w / 2, top + w * R3], [cx - w / 2, top + w * R3]]; }
-const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
-function thirds(T) {
-  // top, bottom right, bottom left: the three corner triangles of T
-  const [a, b, c] = T, ab = mid(a, b), bc = mid(b, c), ca = mid(c, a);
-  return [[a, ab, ca], [ab, b, bc], [ca, bc, c]];
-}
-function shrink(T, k) {
-  const cx = (T[0][0] + T[1][0] + T[2][0]) / 3, cy = (T[0][1] + T[1][1] + T[2][1]) / 3;
-  return T.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
-}
-function path(T) { ctx.beginPath(); ctx.moveTo(T[0][0], T[0][1]); ctx.lineTo(T[1][0], T[1][1]); ctx.lineTo(T[2][0], T[2][1]); ctx.closePath(); }
-function digitTri(T, v, live, done) {
-  path(T); ctx.strokeStyle = "rgba(150,180,235,0.14)"; ctx.lineWidth = 1; ctx.stroke();
-  thirds(T).forEach((t, i) => {
-    path(shrink(t, 0.84));
-    if (live && i <= v) {
-      ctx.fillStyle = done ? "#ffb14a" : "rgba(249,246,236,0.95)"; ctx.fill();
-    } else {
-      ctx.fillStyle = "#12161d"; ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.stroke();
-    }
-  });
+function septLamp(x, y, r, on, done) {
+  if (on) {
+    const halo = done ? "255,177,74" : "225,238,255";
+    const h = ctx.createRadialGradient(x, y, r * 0.8, x, y, r * 3.2);
+    h.addColorStop(0, `rgba(${halo},0.35)`); h.addColorStop(1, `rgba(${halo},0)`);
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 7); ctx.fill();
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec");
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = "#14181f";
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  if (!on) { ctx.strokeStyle = "rgba(255,255,255,0.16)"; ctx.lineWidth = 1; ctx.stroke(); }
 }
 function drawSept(s) {
-  const S = L.side, w = S * 0.38, h = w * R3, wm = S * 0.44, live = !!run;
+  const S = L.side, X0 = L.x0, Y0 = L.y0, r = S * 0.026, live = !!run, done = s.done;
+  const line = done ? "rgba(255,177,74,0.35)" : "rgba(150,180,235,0.30)";
   const d = s.read.replace(":", "").split("").map(Number);   // m9 m3 m1 f3 f9 f27 f81
-  digitTri(tri(L.x0 + w / 2, L.y0, w), d[6], live, s.done);              // 1/81
-  digitTri(tri(L.x0 + S - w / 2, L.y0, w), d[5], live, s.done);          // 1/27
-  digitTri(tri(L.x0 + S - w / 2, L.y0 + S - h, w), d[4], live, s.done);  // 1/9
-  digitTri(tri(L.x0 + w / 2, L.y0 + S - h, w), d[3], live, s.done);      // 1/3
-  const M = tri(L.x0 + S / 2, L.y0 + S / 2 - wm * R3 / 2, wm), [m9, m1, m3] = thirds(M);
-  digitTri(m9, d[0], live, s.done);
-  digitTri(m3, d[1], live, s.done);
-  digitTri(m1, d[2], live, s.done);
+  // a figure: its outline, then its corners in order, the first v+1 lit
+  const figure = (pts, v, closed) => {
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]);
+    if (closed) ctx.closePath();
+    ctx.strokeStyle = line; ctx.lineWidth = 1.5; ctx.stroke();
+    pts.forEach((p, i) => septLamp(p[0], p[1], r, live && i <= v, done));
+  };
+  ctx.strokeStyle = "rgba(150,180,235,0.10)"; ctx.lineWidth = 1; ctx.strokeRect(X0, Y0, S, S);
+  // the corners: the square's corner first, then clockwise round the frame
+  const m = S * 0.26, i = r * 1.6, X1 = X0 + S, Y1 = Y0 + S;
+  figure([[X0 + i, Y0 + i], [X0 + m, Y0 + i], [X0 + i, Y0 + m]], d[6], true);   // 1/81
+  figure([[X1 - i, Y0 + i], [X1 - i, Y0 + m], [X1 - m, Y0 + i]], d[5], true);   // 1/27
+  figure([[X1 - i, Y1 - i], [X1 - m, Y1 - i], [X1 - i, Y1 - m]], d[4], true);   // 1/9
+  figure([[X0 + i, Y1 - i], [X0 + i, Y1 - m], [X0 + m, Y1 - i]], d[3], true);   // 1/3
+  // the middle: tip first, then clockwise; the nines from the bottom up
+  const CX = X0 + S / 2, CY = Y0 + S / 2, g = S * 0.11, hh = S * 0.16, w = S * 0.19, n9 = hh * 0.62;
+  figure([[CX - g - w, CY], [CX - g, CY - hh], [CX - g, CY + hh]], d[1], true);
+  figure([[CX + g + w, CY], [CX + g, CY + hh], [CX + g, CY - hh]], d[2], true);
+  figure([[CX, CY + n9], [CX, CY], [CX, CY - n9]], d[0], false);
 }
 
 /* ---------- FRAME ---------- */
