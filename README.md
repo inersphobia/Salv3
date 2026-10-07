@@ -32,6 +32,9 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   brighter), two orange leads for a string, in at its first core and back
   from where it ends. The centre is the source, brighter the more lamps it
   powers.
+  Above the nines' tip is the 27 lamp: the nines carry into it, so at
+  27:00 it lights and the seven spikes roll to zero, and through the
+  overtime the star keeps counting with the 27 lamp held lit.
   HEPTA is STAR on the obtuse septagram {7/2}: the same circuit, with the
   heptagon sized so every wire lies on one of the star's seven straight
   lines.

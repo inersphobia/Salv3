@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v23";
+const VERSION = "v24";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -474,6 +474,9 @@ function drawSept(s) {
      fill      core -> tip         (lit while the stage holds 2)
      overflow  tip  -> next core   (lit while current flows into a lit core)
      leads     centre -> circuit   (red for a single LED, orange for a string)
+   Above the nines' tip sits the 27 lamp: the nines carry into it, so at
+   27:00 it lights and the seven places roll to zero, and through the
+   overtime the star keeps counting with the 27 lamp held lit.
    The heptagon edges carry nothing; they are drawn faint, as structure.
    Like clockwork, every stage moves on the same tick, at the same instant:
    nothing waits for anything else. Only what is true now is drawn: lit
@@ -485,22 +488,28 @@ const upPlace = k => (k + 6) % 7;    // the next place up: anticlockwise
 // of the star's seven straight lines
 const HEPTA_IN = Math.cos(2 * Math.PI / 7) / Math.cos(Math.PI / 7);
 function drawStar(s, obtuse) {
-  const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S / 2, r = S * 0.028;
-  const Rout = S * 0.45, Rin = obtuse ? Rout * HEPTA_IN : S * 0.22, live = !!run, warm = s.done || sepTone === "amber";
+  // the star sits a little low, leaving room above the nines' tip for the 27 lamp
+  const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S * 0.54, r = S * 0.027;
+  const Rout = S * 0.42, Rin = obtuse ? Rout * HEPTA_IN : S * 0.205, live = !!run, warm = s.done || sepTone === "amber";
   const at = (k, rad) => { const a = -Math.PI / 2 + k * 2 * Math.PI / 7; return [CX + rad * Math.cos(a), CY + rad * Math.sin(a)]; };
-  const N = { C: [CX, CY] };
+  const N = { C: [CX, CY], X: [CX, CY - Rout - S * 0.1] };   // X: the 27 lamp
   for (let k = 0; k < 7; k++) { N["T" + k] = at(k, Rout); N["I" + k] = at(k + 0.5, Rin); }
-  const d = s.read.replace(":", "").split("").map(Number).map(v => live ? v : 0);   // m9 m3 m1 f3 f9 f27 f81
+  // the count: at the bell the 27 lamp lights and the seven places roll to
+  // zero; through the overtime they keep counting
+  const x = s.done ? 1 : 0;
+  const d = (s.done ? readout(s.el - TOTAL) : s.read).replace(":", "").split("").map(Number).map(v => live ? v : 0);   // m9 m3 m1 f3 f9 f27 f81
+  const val = k => k === "X" ? x : d[k], core = k => k === "X" ? "X" : "I" + k;
+  const chain = [6, 5, 4, 3, 2, 1, 0, "X"];                    // 1/81 up to 27
   const wire = (a, b, c, w) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
   const WIRE_C = warm ? "rgba(255,177,74,0.38)" : "rgba(150,180,235,0.42)";
   const FAINT_C = warm ? "rgba(255,177,74,0.12)" : "rgba(150,180,235,0.13)";
   const LIT_C = warm ? "rgba(255,177,74,0.8)" : "rgba(225,238,255,0.7)";
   for (let k = 0; k < 7; k++) {
     wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                                   // structure
-    // overflow: lit only while current flows through it - from a full spike's
-    // tip into a lit core. The nines' one never carries: it closes only at the bell
-    const conducts = k !== 0 && d[k] === 2 && d[upPlace(k)] >= 1;
-    wire(N["T" + k], N["I" + upPlace(k)], conducts ? LIT_C : WIRE_C, conducts ? 2.5 : 1.6);
+    // overflow: lit only while current flows through it - from a full
+    // spike's tip into the next lit core. The nines carry up into the 27 lamp
+    const nx = k === 0 ? "X" : upPlace(k), conducts = d[k] === 2 && val(nx) >= 1;
+    wire(N["T" + k], N[core(nx)], conducts ? LIT_C : WIRE_C, conducts ? 2.5 : 1.6);
     wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);   // fill
   }
   // the leads: lit lamps joined by conducting wires form a circuit, closed
@@ -508,17 +517,18 @@ function drawStar(s, obtuse) {
   // glows brighter); a string's is two orange leads, in to its first core and
   // back from where it ends - its last core, or the tip of a full spike with
   // nothing lit beyond. The cores between are fed in series.
-  const RED = "rgba(255,90,70,0.9)", ORANGE = "rgba(255,165,70,0.85)", lone = [];
-  if (!s.done) for (let k = 6; k >= 0; k--) {
-    if (d[k] < 1) continue;
-    const first = k === 6 || d[k + 1] !== 2;                    // nothing feeds it from below
-    const last = k === 0 || d[k] !== 2 || d[upPlace(k)] < 1;     // it feeds nothing above
-    if (first && last && d[k] === 1) { lone[k] = true; wire(N.C, N["I" + k], RED, 1.6); continue; }
-    if (first) wire(N.C, N["I" + k], ORANGE, 1.6);
-    if (last) wire(N.C, N[(d[k] === 2 ? "T" : "I") + k], ORANGE, 1.6);
-  }
+  const RED = "rgba(255,90,70,0.9)", ORANGE = "rgba(255,165,70,0.85)", lone = {};
+  chain.forEach((k, i) => {
+    const v = val(k); if (v < 1) return;
+    const prev = chain[i - 1], next = chain[i + 1];
+    const first = prev === undefined || val(prev) !== 2;        // nothing feeds it from below
+    const last = next === undefined || v !== 2 || val(next) < 1; // it feeds nothing above
+    if (first && last && v === 1) { lone[k] = true; wire(N.C, N[core(k)], RED, 1.6); return; }
+    if (first) wire(N.C, N[core(k)], ORANGE, 1.6);
+    if (last) wire(N.C, N[v === 2 ? "T" + k : core(k)], ORANGE, 1.6);
+  });
   // the centre: the source - bigger, and brighter for every lamp it powers
-  const f = s.done ? 1 : d.reduce((a, v) => a + v, 0) / 14, cr = r * 0.85, gr = cr * (2 + 3.5 * f);
+  const f = (d.reduce((a, v) => a + v, 0) + x) / 15, cr = r * 0.85, gr = cr * (2 + 3.5 * f);
   const cg = ctx.createRadialGradient(CX, CY, cr * 0.5, CX, CY, gr);
   cg.addColorStop(0, `rgba(255,200,120,${0.25 + 0.55 * f})`); cg.addColorStop(1, "rgba(255,170,60,0)");
   ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(CX, CY, gr, 0, 7); ctx.fill();
@@ -530,6 +540,7 @@ function drawStar(s, obtuse) {
     septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k]);
     septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm);
   }
+  septLamp(N.X[0], N.X[1], r * 1.15, x >= 1, warm, !!lone.X);
 }
 
 /* ---------- FRAME ---------- */
