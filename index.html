@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v18";
+const VERSION = "v19";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -473,6 +473,7 @@ function drawSept(s) {
    place up, and the triangle's sides are its wiring:
      fill      core -> tip         (lit while the stage holds 2)
      overflow  tip  -> next core   (lit while the carry is armed)
+     hold      centre -> core      (lit while the core is lit)
    The heptagon edges carry nothing; they are drawn faint, as structure.
    Like clockwork, every stage moves on the same tick, at the same instant:
    nothing waits for anything else. The overflow wires show the carry in
@@ -501,6 +502,10 @@ function drawStar(s) {
     wire(N["T" + k], N["I" + upPlace(k)], armed[k] ? ARMED_C : WIRE_C, armed[k] ? 2.5 : 1.6);      // overflow
     wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);            // fill
   }
+  // the hold lines: the centre is the supply as well as the clock, and a
+  // steady line from it holds every lit core on - a stage keeps its count
+  // because it is powered, not because it is left alone
+  for (let k = 0; k < 7; k++) if (d[k] >= 1) wire(N.C, N["I" + k], LIT_C, 1.4);
   // the clock: a small source at the centre, wired to the 1/81 core
   ctx.setLineDash([3, 4]); wire(N.C, N.I6, live && !s.done ? ARMED_C : WIRE_C, 1.2); ctx.setLineDash([]);
   ctx.fillStyle = live && !s.done ? ARMED_C : WIRE_C; ctx.beginPath(); ctx.arc(CX, CY, r * 0.45, 0, 7); ctx.fill();
