@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v17";
+const VERSION = "v18";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -465,89 +465,48 @@ function drawSept(s) {
 }
 
 /* ---------- STAR ----------
-   A base-three ripple counter drawn as seven linked triangles. The spikes
-   run clockwise from the top in readout order - nines, threes, ones, 1/3,
-   1/9, 1/27, 1/81 - so the next place up is always anticlockwise. Each
+   A synchronous base-three counter drawn as seven linked triangles. The
+   spikes run clockwise from the top in readout order - nines, threes, ones,
+   1/3, 1/9, 1/27, 1/81 - so the next place up is always anticlockwise. Each
    spike is one stage with two lamps: its core (the heptagon corner on its
    clockwise side) and its tip. Its third corner is the core of the next
    place up, and the triangle's sides are its wiring:
-     fill      core -> tip         along the spoke
-     overflow  tip  -> next core   along the third side
+     fill      core -> tip         (lit while the stage holds 2)
+     overflow  tip  -> next core   (lit while the carry is armed)
    The heptagon edges carry nothing; they are drawn faint, as structure.
-   Every 1/81 minute the clock at the centre sends one pulse into the 1/81
-   core, and the pulse obeys one rule: travel outward until you find a dark
-   lamp, light it and stop; if the spike is full, it empties and the pulse
-   overflows to the next core. Lamps change only as the pulse reaches them.
-   At 27:00 the nines overflow round to the 1/81 core - the ring closes on
-   the bell. */
-const WIRE = 0.055;                  // seconds per wire; the longest run fits in one 1/81 tick
+   Like clockwork, every stage moves on the same tick, at the same instant:
+   nothing waits for anything else. The overflow wires show the carry in
+   advance - a wire is lit while its stage is full and every stage below it
+   is full too, so the lit chain from the clock shows exactly how far the
+   next tick's carry will reach. At 27:00 the nines overflow round to the
+   1/81 core and the ring closes on the bell. */
 const upPlace = k => (k + 6) % 7;    // the next place up: anticlockwise
-const trits = n => { const d = []; for (let i = 0; i < 7; i++) { d.unshift(n % 3); n = Math.floor(n / 3); } return d; };
-function pulseRun(n) {
-  // the pulse sent at tick n: its wires in order, each with what changes
-  // as it leaves (empty) and as it arrives (light)
-  const was = trits((n - 1 + 2187) % 2187), segs = [{ a: "C", b: "I6" }];
-  for (let k = 6; ; k = upPlace(k)) {
-    if (was[k] === 0) { segs[segs.length - 1].light = [k, 1]; break; }
-    segs.push({ a: "I" + k, b: "T" + k });
-    if (was[k] === 1) { segs[segs.length - 1].light = [k, 2]; break; }
-    segs.push({ a: "T" + k, b: "I" + upPlace(k), empty: k });
-    if (k === 0) break;                // the nines overflow: the bell
-  }
-  return { was, segs };
-}
-function starState(el) {
-  // what the star shows at el: the digits as far as the pulse has got,
-  // and where the pulse is (or null)
-  const n = Math.floor(el * 81 / 60), age = el - n * 60 / 81;
-  if (!run || run.pauseAt || n < 1 || n > 2187) return null;
-  const { was, segs } = pulseRun(n), h = Math.floor(age / WIRE);
-  if (h >= segs.length) return null;
-  const d = was.slice();
-  for (let i = 0; i <= h; i++) {
-    if (segs[i].empty !== undefined) d[segs[i].empty] = 0;
-    if (i < h && segs[i].light) d[segs[i].light[0]] = segs[i].light[1];
-  }
-  return { d, seg: segs[h], t: age / WIRE - h, bell: n === 2187 };
-}
 function drawStar(s) {
   const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S / 2, r = S * 0.028;
-  const Rin = S * 0.22, Rout = S * 0.45, live = !!run;
+  const Rin = S * 0.22, Rout = S * 0.45, live = !!run, warm = s.done || sepTone === "amber";
   const at = (k, rad) => { const a = -Math.PI / 2 + k * 2 * Math.PI / 7; return [CX + rad * Math.cos(a), CY + rad * Math.sin(a)]; };
   const N = { C: [CX, CY] };
   for (let k = 0; k < 7; k++) { N["T" + k] = at(k, Rout); N["I" + k] = at(k + 0.5, Rin); }
-  const st = starState(s.el);
-  const warm = (s.done && !st) || sepTone === "amber";
-  const d = st ? st.d : s.read.replace(":", "").split("").map(Number);   // m9 m3 m1 f3 f9 f27 f81
+  const d = s.read.replace(":", "").split("").map(Number).map(v => live ? v : 0);   // m9 m3 m1 f3 f9 f27 f81
   const wire = (a, b, c, w) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); };
   const WIRE_C = warm ? "rgba(255,177,74,0.38)" : "rgba(150,180,235,0.42)";
   const FAINT_C = warm ? "rgba(255,177,74,0.12)" : "rgba(150,180,235,0.13)";
   const LIT_C = warm ? "rgba(255,177,74,0.8)" : "rgba(225,238,255,0.7)";
+  const ARMED_C = "rgba(255,190,100,0.75)";
+  // the carry chain: armed from the clock up through every full stage
+  const armed = [];
+  for (let i = 0, k = 6, en = live && !s.done; i < 7; i++, k = upPlace(k)) { en = en && d[k] === 2; armed[k] = en; }
   for (let k = 0; k < 7; k++) {
-    const v = live ? d[k] : 0;
-    wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                     // structure
-    wire(N["T" + k], N["I" + upPlace(k)], WIRE_C, 1.6);                     // overflow
-    wire(N["I" + k], N["T" + k], v === 2 ? LIT_C : WIRE_C, v === 2 ? 2.5 : 1.6);   // fill
+    wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                                            // structure
+    wire(N["T" + k], N["I" + upPlace(k)], armed[k] ? ARMED_C : WIRE_C, armed[k] ? 2.5 : 1.6);      // overflow
+    wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);            // fill
   }
   // the clock: a small source at the centre, wired to the 1/81 core
-  ctx.setLineDash([3, 4]); wire(N.C, N.I6, WIRE_C, 1.2); ctx.setLineDash([]);
-  ctx.fillStyle = WIRE_C; ctx.beginPath(); ctx.arc(CX, CY, r * 0.45, 0, 7); ctx.fill();
-  if (st) {
-    const a = N[st.seg.a], b = N[st.seg.b], pt = u => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
-    wire(a, pt(st.t), "rgba(255,200,120,0.55)", 2.5);
-    for (let i = 0; i < 10; i++) {
-      const p = pt(Math.max(0, st.t - i * 0.05));
-      ctx.fillStyle = `rgba(255,205,130,${0.55 * (1 - i / 10)})`;
-      ctx.beginPath(); ctx.arc(p[0], p[1], r * 0.55 * (1 - i / 16), 0, 7); ctx.fill();
-    }
-    const h = pt(st.t), g = ctx.createRadialGradient(h[0], h[1], 0, h[0], h[1], r * 2.4);
-    g.addColorStop(0, "rgba(255,235,190,1)"); g.addColorStop(0.3, "rgba(255,190,100,0.6)"); g.addColorStop(1, "rgba(255,170,60,0)");
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h[0], h[1], r * 2.4, 0, 7); ctx.fill();
-  }
+  ctx.setLineDash([3, 4]); wire(N.C, N.I6, live && !s.done ? ARMED_C : WIRE_C, 1.2); ctx.setLineDash([]);
+  ctx.fillStyle = live && !s.done ? ARMED_C : WIRE_C; ctx.beginPath(); ctx.arc(CX, CY, r * 0.45, 0, 7); ctx.fill();
   for (let k = 0; k < 7; k++) {
-    const v = live ? d[k] : 0;
-    septLamp(N["I" + k][0], N["I" + k][1], r, v >= 1, warm);
-    septLamp(N["T" + k][0], N["T" + k][1], r, v >= 2, warm);
+    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm);
+    septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm);
   }
 }
 
@@ -566,15 +525,15 @@ function frame() {
   fit();
   if (!L) return;
   check();
-  const s = state(), pulse = design === "star" && starState(s.el);   // a moving pulse animates every frame
-  const key = s.lit + s.read + s.over + s.done + view + design + !!run + (pulse ? pulse.seg.a + pulse.seg.b + pulse.t : "");
+  const s = state(), key = s.lit + s.read + s.over + s.done + view + design + !!run;
   if (!dirty && key === lastKey) return;   // nothing new to show: draw nothing
   dirty = false; lastKey = key;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   const thirdsView = design === "square" && parts() === 3;
   if (design === "sept") drawSept(s); else if (design === "star") drawStar(s); else drawSquare(s.lit);
-  drawNines(Math.min(s.el, TOTAL), L.lampY, thirdsView);
+  // the 100 / 200 / 1000 lamps belong to SQUARE; SEPT and STAR show the nines themselves
+  if (design === "square") drawNines(Math.min(s.el, TOTAL), L.lampY, thirdsView);
   drawLed(s.read, L.textY, s.done, thirdsView);
   if (s.over) {
     ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";

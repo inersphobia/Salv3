@@ -22,15 +22,17 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   for 1, the third for 2. Corners start at the square's corner and step
   clockwise round the frame; ◀ and ▶ mirror each other, tip, then bottom,
   then top; the nines run bottom, middle, top. The view key belongs to SQUARE and is dimmed in SEPT.
-  STAR is a base-3 ripple counter drawn as seven linked triangles: nines
-  at the top, then clockwise threes, ones, 1/3, 1/9, 1/27, 1/81. Each spike
-  is one stage with two lamps, its core and its tip; its third corner is
-  the core of the next place up. Every 1/81 minute the clock at the centre
-  sends a pulse into the 1/81 core, and the pulse travels outward until it
-  finds a dark lamp, lights it and stops. A full spike empties and the
-  pulse overflows along the triangle's third side to the next core. Lamps
-  change only as the pulse reaches them. At 27:00 the nines overflow round
-  to the start, and the ring closes on the bell.
+  STAR is a synchronous base-3 counter drawn as seven linked triangles:
+  nines at the top, then clockwise threes, ones, 1/3, 1/9, 1/27, 1/81. Each
+  spike is one stage with two lamps, its core and its tip; its third corner
+  is the core of the next place up, joined by the overflow wire. Like
+  clockwork, every lamp moves on the tick, all at once. An overflow wire
+  glows while its spike is full and every spike below it is full too, so
+  the lit chain from the clock at the centre shows how far the next carry
+  will reach. At 27:00 the nines overflow round to the start and the ring
+  closes on the bell.
+  The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT and
+  STAR, which show the nines themselves.
   With SEPT or STAR chosen, the menu also offers **LIGHT**: WHITE (amber
   only once the bell has rung) or AMBER the whole time.
 - The **view key** (three small lights) cycles three views of it:
