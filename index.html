@@ -44,9 +44,12 @@
     display: flex; align-items: center; justify-content: center; }
   #bMenu svg { width: 22px; height: 22px; fill: currentColor; }
   .designs { display: flex; flex-direction: column; gap: 8px; }
-  .designs button { background: #10141c; color: var(--dim); border: 1px solid rgba(0,191,255,0.25);
+  .designs button, .tones button { background: #10141c; color: var(--dim); border: 1px solid rgba(0,191,255,0.25);
     font: bold 14px monospace; letter-spacing: 3px; }
-  .designs button.on { color: #ffc478; border-color: rgba(255,170,60,0.85); background: #241d10; }
+  .tones { display: flex; gap: 8px; }
+  .tones button { flex: 1; }
+  #menu .title + .designs + .title { margin-top: 16px; }
+  .designs button.on, .tones button.on { color: #ffc478; border-color: rgba(255,170,60,0.85); background: #241d10; }
   .card { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
     background: rgba(0,0,0,0.6); z-index: 10; padding: 16px; }
   .card.on { display: flex; }
@@ -120,6 +123,8 @@
 <div class="card" id="menu"><div class="box">
   <div class="title">DESIGN</div>
   <div class="designs"><button data-d="square">SQUARE</button><button data-d="sept">SEPT</button></div>
+  <div class="title" id="toneTitle">SEPT LIGHT</div>
+  <div class="tones" id="tones"><button data-t="white">WHITE</button><button data-t="amber">AMBER</button></div>
 </div></div>
 
 <div class="card" id="verdict"><div class="box">
@@ -149,7 +154,7 @@
 // Bump it with the cache name in sw.js on every release.
 const VERSION = "v12";
 /* ---------- STORAGE ---------- */
-const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design";
+const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
@@ -416,6 +421,8 @@ function drawNines(el, y, lit) {
    corners in turn and they stay lit: one for 0, two for 1, all three
    for 2 - then all go dark and the count starts again. */
 let design = load(K_DESIGN, "square") === "sept" ? "sept" : "square";
+// SEPT's lamps burn white until the bell, or amber the whole time
+let sepTone = load(K_TONE, "white") === "amber" ? "amber" : "white";
 function septLamp(x, y, r, on, done) {
   if (on) {
     const halo = done ? "255,177,74" : "225,238,255";
@@ -431,7 +438,8 @@ function septLamp(x, y, r, on, done) {
 }
 function drawSept(s) {
   const S = L.side, X0 = L.x0, Y0 = L.y0, r = S * 0.026, live = !!run, done = s.done;
-  const line = done ? "rgba(255,177,74,0.35)" : "rgba(150,180,235,0.30)";
+  const warm = done || sepTone === "amber";
+  const line = warm ? "rgba(255,177,74,0.35)" : "rgba(150,180,235,0.30)";
   const d = s.read.replace(":", "").split("").map(Number);   // m9 m3 m1 f3 f9 f27 f81
   // a figure: its outline, then its corners in order, the first v+1 lit
   const figure = (pts, v, closed) => {
@@ -439,7 +447,7 @@ function drawSept(s) {
     for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]);
     if (closed) ctx.closePath();
     ctx.strokeStyle = line; ctx.lineWidth = 1.5; ctx.stroke();
-    pts.forEach((p, i) => septLamp(p[0], p[1], r, live && i <= v, done));
+    pts.forEach((p, i) => septLamp(p[0], p[1], r, live && i <= v, warm));
   };
   ctx.strokeStyle = "rgba(150,180,235,0.10)"; ctx.lineWidth = 1; ctx.strokeRect(X0, Y0, S, S);
   // the corners: the square's corner first, then clockwise round the frame
@@ -494,6 +502,8 @@ function sync() {
   [...$("bView").children].forEach((d, i) => d.classList.toggle("on", i <= view));
   $("bView").disabled = design !== "square";   // the views belong to the square
   for (const b of document.querySelectorAll(".designs button")) b.classList.toggle("on", b.dataset.d === design);
+  for (const b of $("tones").children) b.classList.toggle("on", b.dataset.t === sepTone);
+  $("toneTitle").style.display = $("tones").style.display = design === "sept" ? "" : "none";
   $("playIcon").setAttribute("d", isRunning() && !done ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M8 5v14l11-7z");
   $("bPlay").setAttribute("aria-label", isRunning() ? "Pause" : idle ? "Start" : "Resume");
   $("bPlay").disabled = done;
@@ -507,6 +517,7 @@ $("bView").onclick = () => {
 };
 $("bMenu").onclick = () => $("menu").classList.add("on");
 $("menu").onclick = e => { if (e.target === $("menu")) $("menu").classList.remove("on"); };
+for (const b of $("tones").children) b.onclick = () => { sepTone = b.dataset.t; save(K_TONE, sepTone); sync(); };
 for (const b of document.querySelectorAll(".designs button")) b.onclick = () => {
   design = b.dataset.d; save(K_DESIGN, design);
   $("menu").classList.remove("on"); sync();
