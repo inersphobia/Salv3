@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v15";
+const VERSION = "v16";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -467,11 +467,24 @@ function drawSept(s) {
 /* ---------- STAR ----------
    Seven spikes round a heptagon, one per digit: the nines at the top, then
    clockwise the threes, the ones, 1/3, 1/9, 1/27 and 1/81 - the readout's
-   order. Each spike's two lamps are its outer tip and the inner corner on
-   its anticlockwise side; its third corner, on the clockwise side, is the
-   next spike's lamp and only its anchor. So fourteen corners, every one a
-   lamp, chained round the ring. A digit counts like the readout: 0 dark,
-   1 the tip, 2 the tip and its inner corner, the edge between them lit. */
+   order. Each spike has two lamps: its core lamp, the heptagon corner on
+   its anticlockwise side, and its outer tip. Its third corner, on the
+   clockwise side, is the next spike's core lamp - only its anchor - so the
+   triangles chain round the ring.
+   The core leads: 1 lights the core lamp; 2 adds the tip, and the spoke
+   between them glows. And the core carries: when a digit rolls over from
+   2 to 0, a spark runs along the heptagon edge to the next place up. */
+const HOP = 0.11;   // seconds per carry hop; a full six-hop run fits in one 1/81 tick
+function carry(el) {
+  // Every carry starts on a 1/81 tick; how many places rolled over at that
+  // tick is how many trailing zeros the tick count has in base three.
+  if (!isRunning()) return null;
+  const n = Math.floor(el * 81 / 60), age = el - n * 60 / 81;
+  let hops = 0;
+  for (let m = n; m > 0 && m % 3 === 0 && hops < 6; m /= 3) hops++;
+  const h = Math.floor(age / HOP);
+  return hops && h < hops ? { from: 6 - h, t: age / HOP - h } : null;
+}
 function drawStar(s) {
   const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S / 2, r = S * 0.028;
   const Rin = S * 0.22, Rout = S * 0.45, live = !!run, warm = s.done || sepTone === "amber";
@@ -488,10 +501,25 @@ function drawStar(s) {
     const n = (k + 1) % 7, v = live ? d[k] : 0;
     edge(T[k], I[n], false); edge(I[k], I[n], false); edge(T[k], I[k], v === 2);
   }
+  // the spark: a bright head and a fading tail on the core edge from the
+  // place that rolled over to the next place up
+  const c = s.done ? null : carry(s.el);
+  if (c) {
+    const a = I[c.from], b = I[c.from - 1];
+    const pt = u => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+    for (let i = 0; i < 12; i++) {
+      const p = pt(Math.max(0, c.t - i * 0.04));
+      ctx.fillStyle = `rgba(255,200,120,${0.55 * (1 - i / 12)})`;
+      ctx.beginPath(); ctx.arc(p[0], p[1], r * 0.55 * (1 - i / 18), 0, 7); ctx.fill();
+    }
+    const h = pt(c.t), g = ctx.createRadialGradient(h[0], h[1], 0, h[0], h[1], r * 2.4);
+    g.addColorStop(0, "rgba(255,230,180,1)"); g.addColorStop(0.3, "rgba(255,190,100,0.6)"); g.addColorStop(1, "rgba(255,170,60,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h[0], h[1], r * 2.4, 0, 7); ctx.fill();
+  }
   for (let k = 0; k < 7; k++) {
     const v = live ? d[k] : 0;
-    septLamp(T[k][0], T[k][1], r, v >= 1, warm);
-    septLamp(I[k][0], I[k][1], r, v >= 2, warm);
+    septLamp(I[k][0], I[k][1], r, v >= 1, warm);
+    septLamp(T[k][0], T[k][1], r, v >= 2, warm);
   }
 }
 
@@ -510,7 +538,8 @@ function frame() {
   fit();
   if (!L) return;
   check();
-  const s = state(), key = s.lit + s.read + s.over + s.done + view + design + !!run;
+  const s = state(), spark = design === "star" && carry(s.el);   // a spark animates every frame
+  const key = s.lit + s.read + s.over + s.done + view + design + !!run + (spark ? spark.from + ":" + spark.t : "");
   if (!dirty && key === lastKey) return;   // nothing new to show: draw nothing
   dirty = false; lastKey = key;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
