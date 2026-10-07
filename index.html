@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v21";
+const VERSION = "v22";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -423,12 +423,12 @@ function drawNines(el, y, lit) {
 let design = ["sept", "star"].includes(load(K_DESIGN, "square")) ? load(K_DESIGN, "square") : "square";
 // SEPT's lamps burn white until the bell, or amber the whole time
 let sepTone = load(K_TONE, "white") === "amber" ? "amber" : "white";
-function septLamp(x, y, r, on, done) {
+function septLamp(x, y, r, on, done, bright) {
   if (on) {
-    const halo = done ? "255,177,74" : "225,238,255";
-    const h = ctx.createRadialGradient(x, y, r * 0.8, x, y, r * 3.2);
-    h.addColorStop(0, `rgba(${halo},0.35)`); h.addColorStop(1, `rgba(${halo},0)`);
-    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 7); ctx.fill();
+    const halo = done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
+    const h = ctx.createRadialGradient(x, y, r * 0.8, x, y, hr);
+    h.addColorStop(0, `rgba(${halo},${bright ? 0.6 : 0.35})`); h.addColorStop(1, `rgba(${halo},0)`);
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, hr, 0, 7); ctx.fill();
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec");
     ctx.fillStyle = g;
@@ -472,15 +472,13 @@ function drawSept(s) {
    clockwise side) and its tip. Its third corner is the core of the next
    place up, and the triangle's sides are its wiring:
      fill      core -> tip         (lit while the stage holds 2)
-     overflow  tip  -> next core   (lit while the carry is armed)
-     hold      centre -> core      (closing each string of lit cores)
+     overflow  tip  -> next core   (lit while current flows into a lit core)
+     leads     centre -> circuit   (red for a single LED, orange for a string)
    The heptagon edges carry nothing; they are drawn faint, as structure.
    Like clockwork, every stage moves on the same tick, at the same instant:
-   nothing waits for anything else. The overflow wires show the carry in
-   advance - a wire is lit while its stage is full and every stage below it
-   is full too, so the lit chain from the clock shows exactly how far the
-   next tick's carry will reach. At 27:00 the nines overflow round to the
-   1/81 core and the ring closes on the bell. */
+   nothing waits for anything else. Only what is true now is drawn: lit
+   lamps, the wires conducting between them, and the leads closing each
+   circuit through the centre, which brightens with every lamp it powers. */
 const upPlace = k => (k + 6) % 7;    // the next place up: anticlockwise
 function drawStar(s) {
   const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S / 2, r = S * 0.028;
@@ -493,36 +491,39 @@ function drawStar(s) {
   const WIRE_C = warm ? "rgba(255,177,74,0.38)" : "rgba(150,180,235,0.42)";
   const FAINT_C = warm ? "rgba(255,177,74,0.12)" : "rgba(150,180,235,0.13)";
   const LIT_C = warm ? "rgba(255,177,74,0.8)" : "rgba(225,238,255,0.7)";
-  const ARMED_C = "rgba(255,190,100,0.75)";
-  // the carry chain: armed from the clock up through every full stage
-  const armed = [];
-  for (let i = 0, k = 6, en = live && !s.done; i < 7; i++, k = upPlace(k)) { en = en && d[k] === 2; armed[k] = en; }
   for (let k = 0; k < 7; k++) {
-    wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                                            // structure
-    // overflow: armed for the next carry, or carrying current on into a lit core
+    wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                                   // structure
+    // overflow: lit only while current flows through it - from a full spike's
+    // tip into a lit core. The nines' one never carries: it closes only at the bell
     const conducts = k !== 0 && d[k] === 2 && d[upPlace(k)] >= 1;
-    wire(N["T" + k], N["I" + upPlace(k)], armed[k] ? ARMED_C : conducts ? LIT_C : WIRE_C, armed[k] || conducts ? 2.5 : 1.6);
-    wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);            // fill
+    wire(N["T" + k], N["I" + upPlace(k)], conducts ? LIT_C : WIRE_C, conducts ? 2.5 : 1.6);
+    wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);   // fill
   }
-  // the hold lines: the centre is the supply as well as the clock. Lit
-  // cores joined by conducting overflow wires (a full spike's tip touching
-  // the next lit core) form a string, and a string is a closed loop: one
-  // line from the centre to its first core, one back from its last. The
-  // cores between are fed in series. The return leaves from where the string
-  // truly ends: its last core if that spike holds 1, or the spike's tip if
-  // it holds 2 with nothing lit beyond. A lone lit core is both ends: one line.
-  for (let k = 6; k >= 0; k--) {
+  // the leads: lit lamps joined by conducting wires form a circuit, closed
+  // through the centre. A single LED's circuit is one red lead (and the lamp
+  // glows brighter); a string's is two orange leads, in to its first core and
+  // back from where it ends - its last core, or the tip of a full spike with
+  // nothing lit beyond. The cores between are fed in series.
+  const RED = "rgba(255,90,70,0.9)", ORANGE = "rgba(255,165,70,0.85)", lone = [];
+  if (!s.done) for (let k = 6; k >= 0; k--) {
     if (d[k] < 1) continue;
     const first = k === 6 || d[k + 1] !== 2;                    // nothing feeds it from below
     const last = k === 0 || d[k] !== 2 || d[upPlace(k)] < 1;     // it feeds nothing above
-    if (first) wire(N.C, N["I" + k], LIT_C, 1.4);
-    if (last) wire(N.C, N[(d[k] === 2 ? "T" : "I") + k], LIT_C, 1.4);
+    if (first && last && d[k] === 1) { lone[k] = true; wire(N.C, N["I" + k], RED, 1.6); continue; }
+    if (first) wire(N.C, N["I" + k], ORANGE, 1.6);
+    if (last) wire(N.C, N[(d[k] === 2 ? "T" : "I") + k], ORANGE, 1.6);
   }
-  // the clock: a small source at the centre, wired to the 1/81 core
-  ctx.setLineDash([3, 4]); wire(N.C, N.I6, live && !s.done ? ARMED_C : WIRE_C, 1.2); ctx.setLineDash([]);
-  ctx.fillStyle = live && !s.done ? ARMED_C : WIRE_C; ctx.beginPath(); ctx.arc(CX, CY, r * 0.45, 0, 7); ctx.fill();
+  // the centre: the source - bigger, and brighter for every lamp it powers
+  const f = s.done ? 1 : d.reduce((a, v) => a + v, 0) / 14, cr = r * 0.85, gr = cr * (2 + 3.5 * f);
+  const cg = ctx.createRadialGradient(CX, CY, cr * 0.5, CX, CY, gr);
+  cg.addColorStop(0, `rgba(255,200,120,${0.25 + 0.55 * f})`); cg.addColorStop(1, "rgba(255,170,60,0)");
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(CX, CY, gr, 0, 7); ctx.fill();
+  const cc = ctx.createRadialGradient(CX, CY, 0, CX, CY, cr);
+  cc.addColorStop(0, `rgba(255,${215 + Math.round(40 * f)},${150 + Math.round(90 * f)},1)`);
+  cc.addColorStop(1, `rgba(200,140,60,${0.55 + 0.45 * f})`);
+  ctx.fillStyle = cc; ctx.beginPath(); ctx.arc(CX, CY, cr, 0, 7); ctx.fill();
   for (let k = 0; k < 7; k++) {
-    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm);
+    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k]);
     septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm);
   }
 }
