@@ -27,8 +27,9 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   spike is one stage with two lamps, its core and its tip; its third corner
   is the core of the next place up, joined by the overflow wire. Every lamp
   moves on the tick, all at once. Only what is true now is drawn: a wire
-  lights while current flows between two lit lamps, and leads from the
-  centre close each circuit - one red lead for a single LED (which glows
+  lights while current flows between two lit lamps - neighbouring lit
+  places join through a full spike's tip, or along the heptagon edge when the
+  lower holds 1 - and leads from the centre close each circuit - one red lead for a single LED (which glows
   brighter), two orange leads for a string, in at its first core and back
   from where it ends. The centre is the source, brighter the more lamps it
   powers.
