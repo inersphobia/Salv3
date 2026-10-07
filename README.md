@@ -24,9 +24,11 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   then top; the nines run bottom, middle, top. The view key belongs to SQUARE and is dimmed in SEPT.
   STAR is seven spikes round a heptagon, one per digit: nines at the top,
   then clockwise threes, ones, 1/3, 1/9, 1/27, 1/81. Each spike's lamps are
-  its tip and the inner corner on its anticlockwise side; its third corner
-  is the next spike's lamp, so the triangles chain round the ring. It
-  counts like the readout: 0 dark, 1 the tip, 2 the tip and inner corner.
+  its core lamp (the heptagon corner on its anticlockwise side) and its
+  tip; its third corner is the next spike's core lamp, so the triangles
+  chain round the ring. The core leads: 1 lights the core lamp, 2 adds the
+  tip. When a digit rolls over from 2 to 0, a spark runs along the core to
+  the next place up, so cascades travel round the heptagon.
   With SEPT or STAR chosen, the menu also offers **LIGHT**: WHITE (amber
   only once the bell has rung) or AMBER the whole time.
 - The **view key** (three small lights) cycles three views of it:
