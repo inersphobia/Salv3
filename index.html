@@ -122,7 +122,7 @@
 
 <div class="card" id="menu"><div class="box">
   <div class="title">DESIGN</div>
-  <div class="designs"><button data-d="square">SQUARE</button><button data-d="sept">SEPT</button><button data-d="star">STAR</button></div>
+  <div class="designs"><button data-d="square">SQUARE</button><button data-d="sept">SEPT</button><button data-d="star">STAR</button><button data-d="hepta">HEPTA</button></div>
   <div class="title" id="toneTitle">LIGHT</div>
   <div class="tones" id="tones"><button data-t="white">WHITE</button><button data-t="amber">AMBER</button></div>
 </div></div>
@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v22";
+const VERSION = "v23";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -420,7 +420,7 @@ function drawNines(el, y, lit) {
    on a line between them three lamps carry the nines. As in the old
    Septagram, one lamp burns per figure and the digit says which: its
    first corner for 0, its second for 1, its third for 2. */
-let design = ["sept", "star"].includes(load(K_DESIGN, "square")) ? load(K_DESIGN, "square") : "square";
+let design = ["sept", "star", "hepta"].includes(load(K_DESIGN, "square")) ? load(K_DESIGN, "square") : "square";
 // SEPT's lamps burn white until the bell, or amber the whole time
 let sepTone = load(K_TONE, "white") === "amber" ? "amber" : "white";
 function septLamp(x, y, r, on, done, bright) {
@@ -480,9 +480,13 @@ function drawSept(s) {
    lamps, the wires conducting between them, and the leads closing each
    circuit through the centre, which brightens with every lamp it powers. */
 const upPlace = k => (k + 6) % 7;    // the next place up: anticlockwise
-function drawStar(s) {
+// HEPTA is STAR on the obtuse septagram {7/2}: the same circuit, with the
+// heptagon sized so every spoke, overflow wire and heptagon edge lies on one
+// of the star's seven straight lines
+const HEPTA_IN = Math.cos(2 * Math.PI / 7) / Math.cos(Math.PI / 7);
+function drawStar(s, obtuse) {
   const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S / 2, r = S * 0.028;
-  const Rin = S * 0.22, Rout = S * 0.45, live = !!run, warm = s.done || sepTone === "amber";
+  const Rout = S * 0.45, Rin = obtuse ? Rout * HEPTA_IN : S * 0.22, live = !!run, warm = s.done || sepTone === "amber";
   const at = (k, rad) => { const a = -Math.PI / 2 + k * 2 * Math.PI / 7; return [CX + rad * Math.cos(a), CY + rad * Math.sin(a)]; };
   const N = { C: [CX, CY] };
   for (let k = 0; k < 7; k++) { N["T" + k] = at(k, Rout); N["I" + k] = at(k + 0.5, Rin); }
@@ -549,7 +553,7 @@ function frame() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   const thirdsView = design === "square" && parts() === 3;
-  if (design === "sept") drawSept(s); else if (design === "star") drawStar(s); else drawSquare(s.lit);
+  if (design === "sept") drawSept(s); else if (design === "star" || design === "hepta") drawStar(s, design === "hepta"); else drawSquare(s.lit);
   // the 100 / 200 / 1000 lamps belong to SQUARE; SEPT and STAR show the nines themselves
   if (design === "square") drawNines(Math.min(s.el, TOTAL), L.lampY, thirdsView);
   drawLed(s.read, L.textY, s.done, thirdsView);
