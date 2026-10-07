@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v19";
+const VERSION = "v20";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -473,7 +473,7 @@ function drawSept(s) {
    place up, and the triangle's sides are its wiring:
      fill      core -> tip         (lit while the stage holds 2)
      overflow  tip  -> next core   (lit while the carry is armed)
-     hold      centre -> core      (lit while the core is lit)
+     hold      centre -> core      (closing each string of lit cores)
    The heptagon edges carry nothing; they are drawn faint, as structure.
    Like clockwork, every stage moves on the same tick, at the same instant:
    nothing waits for anything else. The overflow wires show the carry in
@@ -499,13 +499,22 @@ function drawStar(s) {
   for (let i = 0, k = 6, en = live && !s.done; i < 7; i++, k = upPlace(k)) { en = en && d[k] === 2; armed[k] = en; }
   for (let k = 0; k < 7; k++) {
     wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                                            // structure
-    wire(N["T" + k], N["I" + upPlace(k)], armed[k] ? ARMED_C : WIRE_C, armed[k] ? 2.5 : 1.6);      // overflow
+    // overflow: armed for the next carry, or carrying current on into a lit core
+    const conducts = k !== 0 && d[k] === 2 && d[upPlace(k)] >= 1;
+    wire(N["T" + k], N["I" + upPlace(k)], armed[k] ? ARMED_C : conducts ? LIT_C : WIRE_C, armed[k] || conducts ? 2.5 : 1.6);
     wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);            // fill
   }
-  // the hold lines: the centre is the supply as well as the clock, and a
-  // steady line from it holds every lit core on - a stage keeps its count
-  // because it is powered, not because it is left alone
-  for (let k = 0; k < 7; k++) if (d[k] >= 1) wire(N.C, N["I" + k], LIT_C, 1.4);
+  // the hold lines: the centre is the supply as well as the clock. Lit
+  // cores joined by conducting overflow wires (a full spike's tip touching
+  // the next lit core) form a string, and a string is a closed loop: one
+  // line from the centre to its first core, one back from its last. The
+  // cores between are fed in series. A lone lit core is both ends: one line.
+  for (let k = 6; k >= 0; k--) {
+    if (d[k] < 1) continue;
+    const first = k === 6 || d[k + 1] !== 2;                    // nothing feeds it from below
+    const last = k === 0 || d[k] !== 2 || d[upPlace(k)] < 1;     // it feeds nothing above
+    if (first || last) wire(N.C, N["I" + k], LIT_C, 1.4);
+  }
   // the clock: a small source at the centre, wired to the 1/81 core
   ctx.setLineDash([3, 4]); wire(N.C, N.I6, live && !s.done ? ARMED_C : WIRE_C, 1.2); ctx.setLineDash([]);
   ctx.fillStyle = live && !s.done ? ARMED_C : WIRE_C; ctx.beginPath(); ctx.arc(CX, CY, r * 0.45, 0, 7); ctx.fill();
