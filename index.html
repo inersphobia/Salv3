@@ -532,7 +532,8 @@ function frame() {
   ctx.clearRect(0, 0, W, H);
   const thirdsView = design === "square" && parts() === 3;
   if (design === "sept") drawSept(s); else if (design === "star") drawStar(s); else drawSquare(s.lit);
-  drawNines(Math.min(s.el, TOTAL), L.lampY, thirdsView);
+  // the 100 / 200 / 1000 lamps belong to SQUARE; SEPT and STAR show the nines themselves
+  if (design === "square") drawNines(Math.min(s.el, TOTAL), L.lampY, thirdsView);
   drawLed(s.read, L.textY, s.done, thirdsView);
   if (s.over) {
     ctx.font = (W < 500 ? 19 : 23) + "px monospace"; ctx.textAlign = "center";

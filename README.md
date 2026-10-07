@@ -31,6 +31,8 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   the lit chain from the clock at the centre shows how far the next carry
   will reach. At 27:00 the nines overflow round to the start and the ring
   closes on the bell.
+  The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT and
+  STAR, which show the nines themselves.
   With SEPT or STAR chosen, the menu also offers **LIGHT**: WHITE (amber
   only once the bell has rung) or AMBER the whole time.
 - The **view key** (three small lights) cycles three views of it:
