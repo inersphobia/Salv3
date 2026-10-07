@@ -79,21 +79,22 @@
   .now { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 16px; }
   .now div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 6px; text-align: center; }
   .now small { display: block; font-size: 10px; letter-spacing: 2px; color: var(--dim); }
-  .now strong { display: block; font-size: 30px; margin: 4px 0 2px; }
+  .now canvas { display: block; width: 84px; height: 92px; max-width: 100%; margin: 2px auto 0; }
+  .now strong { display: block; font-size: 24px; margin: 0 0 2px; }
   .now em { font-style: normal; font-size: 11px; color: var(--dim); }
   .tabs { display: flex; gap: 6px; padding: 8px 16px; }
   .tabs button { flex: 1; min-height: 38px; background: #10141c; color: var(--dim);
     border: 1px solid rgba(0,191,255,0.25); font: bold 12px monospace; letter-spacing: 2px; }
   .tabs button.on { color: #ffc478; border-color: rgba(255,170,60,0.85); background: #241d10; }
   #list { flex: 1; overflow-y: auto; padding: 0 16px calc(16px + env(safe-area-inset-bottom)); }
-  .per { border-bottom: 1px solid var(--line); padding: 10px 0; cursor: pointer; }
+  .per { border-bottom: 1px solid var(--line); padding: 8px 0; cursor: pointer; }
+  .pRow { display: flex; align-items: center; gap: 10px; }
+  .pRow canvas { width: 44px; height: 48px; flex: none; }
+  .pMain { flex: 1; min-width: 0; }
   .pTop { display: flex; align-items: baseline; gap: 10px; }
   .pTop .lab { flex: 1; }
   .pTop .net { font-size: 20px; font-weight: bold; min-width: 44px; text-align: right; }
   .pSub { font-size: 11px; color: var(--dim); margin-top: 3px; display: flex; gap: 12px; }
-  .bar { position: relative; height: 4px; background: #11161d; border-radius: 2px; margin-top: 6px; }
-  .bar i { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
-  .bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #333; }
   .sess { display: none; margin-top: 8px; }
   .per.open .sess { display: block; }
   .s1 { display: flex; gap: 10px; align-items: center; font-size: 12px; padding: 4px 0; color: #9fb0bf; }
@@ -152,7 +153,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v26";
+const VERSION = "v27";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -669,11 +670,48 @@ const hm = sec => { const m = Math.round(sec / 60); return m < 60 ? m + "m" : Ma
 const pip = (v, lab) => `<span class="pip ${v == null ? "zer" : tone(v)}">${lab}${v == null ? "·" : signed(v)}</span>`;
 const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+// A score drawn on the star: |v| in base three, ones on the 1/81 spike, the
+// 27 lamp the 2187s place. Amber lines of one weight meeting at the corners,
+// over a faint skeleton; the sign lives in the number beside it.
+function scoreGlyph(cv, v, W, H) {
+  const D = Math.min(devicePixelRatio || 1, 2), ctx = cv.getContext("2d");
+  cv.width = W * D; cv.height = H * D; ctx.setTransform(D, 0, 0, D, 0, 0); ctx.clearRect(0, 0, W, H);
+  const n = Math.min(Math.abs(v), 4373), x = n >= 2187 ? 1 : 0, d = [];
+  for (let i = 0, m = n % 2187; i < 7; i++) { d.unshift(m % 3); m = Math.floor(m / 3); }
+  const val = k => k === "X" ? x : d[k], core = k => k === "X" ? "X" : "I" + k;
+  const R = Math.min(W, H / 1.12) * 0.4, cx = W / 2, cy = H * 0.57, w = Math.max(1.2, W / 42);
+  const Rin = design === "hepta" ? R * Math.cos(2 * Math.PI / 7) / Math.cos(Math.PI / 7) : R * 0.49;
+  const at = (k, rad) => { const a = -Math.PI / 2 + k * 2 * Math.PI / 7; return [cx + rad * Math.cos(a), cy + rad * Math.sin(a)]; };
+  const P = { C: [cx, cy], X: [cx, cy - R * 1.24] };
+  for (let k = 0; k < 7; k++) { P["T" + k] = at(k, R); P["I" + k] = at(k + 0.5, Rin); }
+  const joins = k => { const nx = k === 0 ? "X" : upPlace(k); return d[k] >= 1 && val(nx) >= 1 && (d[k] === 2 || nx !== "X"); };
+  const seg = [];
+  for (let k = 0; k < 7; k++) {
+    if (d[k] === 2) seg.push([P["I" + k], P["T" + k]]);
+    if (joins(k)) seg.push([d[k] === 2 ? P["T" + k] : P["I" + k], P[core(k === 0 ? "X" : upPlace(k))]]);
+  }
+  const chain = [6, 5, 4, 3, 2, 1, 0, "X"];
+  chain.forEach((k, i) => {
+    const vv = val(k); if (vv < 1) return;
+    const first = i === 0 || !joins(chain[i - 1]), last = i === 7 || !joins(k);
+    if (first) seg.push([P.C, P[core(k)]]);
+    if (last && !(first && vv === 1)) seg.push([P.C, P[vv === 2 ? "T" + k : core(k)]]);
+  });
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(150,180,235,0.13)"; ctx.lineWidth = w; ctx.beginPath();
+  for (let k = 0; k < 7; k++) for (const [a, b] of [[P["I" + k], P["I" + upPlace(k)]], [P["I" + k], P["T" + k]], [P["T" + k], P["I" + upPlace(k)]]]) { ctx.moveTo(...a); ctx.lineTo(...b); }
+  ctx.moveTo(...P.T0); ctx.lineTo(...P.X); ctx.stroke();
+  ctx.beginPath(); for (const [a, b] of seg) { ctx.moveTo(...a); ctx.lineTo(...b); }
+  ctx.strokeStyle = "rgba(255,177,74,0.22)"; ctx.lineWidth = w * 3; ctx.stroke();
+  ctx.strokeStyle = "#ffb14a"; ctx.lineWidth = w; ctx.stroke();
+}
+const base3 = v => (v < 0 ? "−" : "") + Math.abs(v).toString(3) + "₃";
+
 function renderScore() {
   const now = Date.now();
   $("now").innerHTML = [["TODAY", "day"], ["WEEK", "week"], ["MONTH", "month"]].map(([lab, g]) => {
     const a = sum(log.filter(s => periodStart(s.at, g) === periodStart(now, g)));
-    return `<div><small>${lab}</small><strong class="${tone(a.net)}">${signed(a.net)}</strong>` +
+    return `<div><small>${lab}</small><canvas data-v="${a.net}"></canvas><strong class="${tone(a.net)}">${signed(a.net)}</strong>` +
            `<em>${a.n} · ${hm(a.sec)}</em></div>`;
   }).join("");
 
@@ -684,10 +722,8 @@ function renderScore() {
     groups.get(k).push(s);
   }
   const rows = [...groups].sort((a, b) => b[0] - a[0]).slice(0, 90);
-  const max = Math.max(1, ...rows.map(([, l]) => Math.abs(sum(l).net)));
   $("list").innerHTML = (log.length ? rows.map(([k, l]) => {
-    const a = sum(l), w = Math.abs(a.net) / max * 50;
-    const bar = `<i style="${a.net >= 0 ? "left:50%" : "right:50%"};width:${w}%;background:${a.net >= 0 ? "var(--amber)" : "var(--cool)"}"></i>`;
+    const a = sum(l);
     const sess = l.map(s => {
       const d = new Date(s.at), when = gran === "day" ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + " ";
       const rated = s.t != null || s.w != null;
@@ -696,13 +732,16 @@ function renderScore() {
              (s.w != null ? pip(s.w, "W") : pip(rated ? s.t : null, "T") + pip(rated ? s.p : null, "P")) +
              (s.n ? `<span class="note">${esc(s.n)}</span>` : "") + `</div>`;
     }).join("");
-    return `<div class="per"><div class="pTop"><span class="lab">${periodLabel(k, gran)}</span>` +
+    return `<div class="per"><div class="pRow"><canvas data-v="${a.net}"></canvas><div class="pMain">` +
+           `<div class="pTop"><span class="lab">${periodLabel(k, gran)}</span>` +
            `<span class="net ${tone(a.net)}">${signed(a.net)}</span></div>` +
            `<div class="pSub"><span>${a.n} session${a.n === 1 ? "" : "s"}</span><span>${hm(a.sec)}</span>` +
-           `<span>T ${signed(a.t)}</span><span>P ${signed(a.p)}</span>${a.hasW ? `<span>W ${signed(a.w)}</span>` : ""}</div>` +
-           `<div class="bar">${bar}</div><div class="sess">${sess}</div></div>`;
+           `<span>T ${signed(a.t)}</span><span>P ${signed(a.p)}</span>${a.hasW ? `<span>W ${signed(a.w)}</span>` : ""}` +
+           `<span>${base3(a.net)}</span></div></div></div><div class="sess">${sess}</div></div>`;
   }).join("") : `<div class="empty">No sessions yet. Finish one and rate it.</div>`) +
   `<div class="foot"><button id="sExport">EXPORT</button><div class="ver">${VERSION}</div></div>`;
+  for (const c of $("now").querySelectorAll("canvas")) scoreGlyph(c, +c.dataset.v, 84, 92);
+  for (const c of $("list").querySelectorAll(".per canvas")) scoreGlyph(c, +c.dataset.v, 44, 48);
   for (const el of $("list").querySelectorAll(".per")) el.onclick = () => el.classList.toggle("open");
   $("sExport").onclick = () => {
     const a = document.createElement("a");

@@ -62,8 +62,10 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   returns to the paused timer. Anything under a minute is discarded.
 - **LOGS** shows today, this week and this month, with history by
   day, week or month. A session scores T + P, and a period's score is the
-  sum of its sessions. Tap a row to see its sessions. EXPORT downloads
-  everything as JSON.
+  sum of its sessions. Each score is also drawn as a glyph on the star:
+  its size in base 3, ones on the 1/81 spike, in amber lines (the number
+  beside it carries the sign, amber or blue). Tap a row to see its
+  sessions. EXPORT downloads everything as JSON.
 
 The time is base 3. Below the square, the readout has three places for the
 minute of the session (000 to 222), a colon, then four places for thirds,
