@@ -1,7 +1,7 @@
 // Network first, so a new version arrives on the next launch; the cache
 // keeps the app working offline. Only this app's caches are touched:
 // other apps on the same github.io origin keep theirs.
-const CACHE = 'square-v24';
+const CACHE = 'square-v25';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

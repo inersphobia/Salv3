@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v24";
+const VERSION = "v25";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -506,6 +506,9 @@ function drawStar(s, obtuse) {
   const LIT_C = warm ? "rgba(255,177,74,0.8)" : "rgba(225,238,255,0.7)";
   for (let k = 0; k < 7; k++) {
     wire(N["I" + k], N["I" + upPlace(k)], FAINT_C, 1);                                   // structure
+    // the nines' triangle keeps its third side as structure: it carries
+    // nothing (the nines carry into the 27 lamp), but the shape stays whole
+    if (k === 0) wire(N.T0, N.I6, FAINT_C, 1);
     // overflow: lit only while current flows through it - from a full
     // spike's tip into the next lit core. The nines carry up into the 27 lamp
     const nx = k === 0 ? "X" : upPlace(k), conducts = d[k] === 2 && val(nx) >= 1;
