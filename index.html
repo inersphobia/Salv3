@@ -152,7 +152,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v12";
+const VERSION = "v13";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -417,9 +417,9 @@ function drawNines(el, y, lit) {
    triangle whose right angle is the square's corner and whose long edge
    cuts across it like a picture frame's mitre. In the middle, a reversed
    play triangle (threes) and a play triangle (ones) face each other, and
-   on a line between them three lamps carry the nines. A digit lights its
-   corners in turn and they stay lit: one for 0, two for 1, all three
-   for 2 - then all go dark and the count starts again. */
+   on a line between them three lamps carry the nines. As in the old
+   Septagram, one lamp burns per figure and the digit says which: its
+   first corner for 0, its second for 1, its third for 2. */
 let design = load(K_DESIGN, "square") === "sept" ? "sept" : "square";
 // SEPT's lamps burn white until the bell, or amber the whole time
 let sepTone = load(K_TONE, "white") === "amber" ? "amber" : "white";
@@ -441,13 +441,13 @@ function drawSept(s) {
   const warm = done || sepTone === "amber";
   const line = warm ? "rgba(255,177,74,0.35)" : "rgba(150,180,235,0.30)";
   const d = s.read.replace(":", "").split("").map(Number);   // m9 m3 m1 f3 f9 f27 f81
-  // a figure: its outline, then its corners in order, the first v+1 lit
+  // a figure: its outline, then its corners in order, the v-th one lit
   const figure = (pts, v, closed) => {
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
     for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]);
     if (closed) ctx.closePath();
     ctx.strokeStyle = line; ctx.lineWidth = 1.5; ctx.stroke();
-    pts.forEach((p, i) => septLamp(p[0], p[1], r, live && i <= v, warm));
+    pts.forEach((p, i) => septLamp(p[0], p[1], r, live && i === v, warm));
   };
   ctx.strokeStyle = "rgba(150,180,235,0.10)"; ctx.lineWidth = 1; ctx.strokeRect(X0, Y0, S, S);
   // the corners: the square's corner first, then clockwise round the frame

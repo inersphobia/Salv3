@@ -17,9 +17,11 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   1/27, bottom right 1/9, bottom left 1/3), each a right triangle whose
   long edge cuts across the corner like a picture frame's mitre. In the
   middle, ◀ carries the threes and ▶ the ones, and the three lamps on the
-  line between them the nines. A digit lights its corners in turn and
-  they stay lit: one for 0, two for 1, all three for 2, then they go dark
-  and start again. The view key belongs to SQUARE and is dimmed in SEPT.
+  line between them the nines. As in the old Septagram, one lamp burns
+  per figure and the digit says which: the first corner for 0, the second
+  for 1, the third for 2. Corners start at the square's corner and step
+  clockwise round the frame; ◀ and ▶ start at their tips; the nines run
+  bottom, middle, top. The view key belongs to SQUARE and is dimmed in SEPT.
   With SEPT chosen, the menu also offers **SEPT LIGHT**: WHITE (amber only
   once the bell has rung) or AMBER the whole time.
 - The **view key** (three small lights) cycles three views of it:
