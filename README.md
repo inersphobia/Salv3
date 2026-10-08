@@ -42,7 +42,10 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT, STAR
   and HEPTA, which show the nines themselves.
   With SEPT, STAR or HEPTA chosen, the menu also offers **LIGHT**: WHITE (amber
-  only once the bell has rung) or AMBER the whole time.
+  only once the bell has rung) or AMBER the whole time. A new install
+  starts on HEPTA with AMBER light. Below that, **MINUTES** shows the glyph
+  for each whole minute, 001₃ to 1000₃ (1 to 27). The menu key opens and
+  closes the menu, with a firm buzz; nothing else closes it.
 - The **view key** (three small lights) cycles three views of it:
   - **one light:** 81 × 81 = 6561 lamps, one per 1/243 of a minute; the
     square is the whole session.
