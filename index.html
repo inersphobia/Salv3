@@ -166,7 +166,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v32";
+const VERSION = "v34";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone", K_CIRC = "sq.circ";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -404,9 +404,9 @@ function drawLed(str, baseY, done, darkNines) {
         const lg = ctx.createRadialGradient(cx, ly, 0, cx, ly, r);
         lg.addColorStop(0, red ? "#ff6a52" : done ? "#ffb14a" : "#fff"); lg.addColorStop(1, red ? "#b3301f" : done ? "#b87724" : "#c8d8ec");
         ctx.fillStyle = lg;
-      } else ctx.fillStyle = "#262d39";
+      } else ctx.fillStyle = red ? "#4a221d" : "#36404d";
       ctx.beginPath(); ctx.arc(cx, ly, r, 0, 7); ctx.fill();
-      if (+ch <= k) { ctx.strokeStyle = "rgba(255,255,255,0.32)"; ctx.lineWidth = 1; ctx.stroke(); }
+      if (+ch <= k) { ctx.strokeStyle = red ? "rgba(255,105,85,0.95)" : "rgba(205,220,240,0.6)"; ctx.lineWidth = 1.5; ctx.stroke(); }
     }
     x += s + gap;
   }
@@ -442,20 +442,18 @@ let design = ["square", "sept", "star"].includes(load(K_DESIGN, "hepta")) ? load
 let sepTone = load(K_TONE, "amber") === "white" ? "white" : "amber";
 // STAR and HEPTA wire every place, or only the minutes (the seconds just count)
 let circ = load(K_CIRC, "all") === "min" ? "min" : "all";
-// red: a minute lamp on STAR and HEPTA - red when lit, red-ringed when not,
-// so the minute spikes read as minutes even dark
-function septLamp(x, y, r, on, done, bright, red) {
+function septLamp(x, y, r, on, done, bright) {
   if (on) {
-    const halo = red ? "255,90,70" : done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
+    const halo = done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
     const h = ctx.createRadialGradient(x, y, r * 0.8, x, y, hr);
     h.addColorStop(0, `rgba(${halo},${bright ? 0.6 : 0.35})`); h.addColorStop(1, `rgba(${halo},0)`);
     ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, hr, 0, 7); ctx.fill();
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, red ? "#ff6a52" : done ? "#ffb14a" : "#fff"); g.addColorStop(1, red ? "#b3301f" : done ? "#b87724" : "#c8d8ec");
+    g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec");
     ctx.fillStyle = g;
-  } else ctx.fillStyle = red ? "#2e1c1c" : "#222935";
+  } else ctx.fillStyle = "#14181f";
   ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
-  if (!on) { ctx.strokeStyle = red ? "rgba(255,110,90,0.55)" : "rgba(255,255,255,0.3)"; ctx.lineWidth = red ? 1.5 : 1; ctx.stroke(); }
+  if (!on) { ctx.strokeStyle = "rgba(255,255,255,0.16)"; ctx.lineWidth = 1; ctx.stroke(); }
 }
 function drawSept(s) {
   const S = L.side, X0 = L.x0, Y0 = L.y0, r = S * 0.026, live = !!run, done = s.done;
@@ -511,7 +509,7 @@ const upPlace = k => (k + 6) % 7;    // the next place up: anticlockwise
 const HEPTA_IN = Math.cos(2 * Math.PI / 7) / Math.cos(Math.PI / 7);
 function drawStar(s, obtuse) {
   // the star sits a little low, leaving room above the nines' tip for the 27 lamp
-  const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S * 0.54, r = S * 0.034;
+  const S = L.side, CX = L.x0 + S / 2, CY = L.y0 + S * 0.54, r = S * 0.027;
   const Rout = S * 0.42, Rin = obtuse ? Rout * HEPTA_IN : S * 0.205, live = !!run, warm = s.done || sepTone === "amber";
   const at = (k, rad) => { const a = -Math.PI / 2 + k * 2 * Math.PI / 7; return [CX + rad * Math.cos(a), CY + rad * Math.sin(a)]; };
   const N = { C: [CX, CY], X: [CX, CY - Rout - S * 0.1] };   // X: the 27 lamp
@@ -572,10 +570,10 @@ function drawStar(s, obtuse) {
   cc.addColorStop(1, `rgba(200,140,60,${0.55 + 0.45 * f})`);
   ctx.fillStyle = cc; ctx.beginPath(); ctx.arc(CX, CY, cr, 0, 7); ctx.fill();
   for (let k = 0; k < 7; k++) {
-    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k], k <= 2);
-    septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm, false, k <= 2);
+    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k]);
+    septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm);
   }
-  septLamp(N.X[0], N.X[1], r * 1.15, x >= 1, warm, !!lone.X, true);
+  septLamp(N.X[0], N.X[1], r * 1.15, x >= 1, warm, !!lone.X);
 }
 
 /* ---------- FRAME ---------- */
