@@ -36,6 +36,9 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   Above the nines' tip is the 27 lamp: the nines carry into it, so at
   27:00 it lights and the seven spikes roll to zero, and through the
   overtime the star keeps counting with the 27 lamp held lit.
+  On STAR and HEPTA the minute spikes (9s, 3s, 1s) and the 27 lamp are
+  red: red when lit, red-ringed when dark, so you can tell them apart
+  from the seconds even when nothing is lit.
   HEPTA is STAR on the obtuse septagram {7/2}: the same circuit, with the
   heptagon sized so every wire lies on one of the star's seven straight
   lines.
