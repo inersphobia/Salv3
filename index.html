@@ -166,7 +166,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v30";
+const VERSION = "v31";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone", K_CIRC = "sq.circ";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -319,7 +319,7 @@ function layout() {
   for (let k = 1; k < inc.length; k++) used += (N / Math.pow(3, k) - 1) * inc[k];
   const y0 = Math.round(topH + Math.max(pad, (H - side - topH - readH) / 2));
   return { side, N, inc, pitch: (side - used) / N, x0: Math.round((W - side) / 2), y0,
-           lampY: y0 - 30, textY: y0 + side + 46 };
+           lampY: y0 - 30, textY: y0 + side + 54 };
 }
 function pos(g) {
   let x = g * L.pitch;
@@ -379,7 +379,7 @@ function frac(el) {
 // overtime counts up in the same base: whole minutes, then the fraction
 const overtime = sec => "+" + Math.floor(sec / 60).toString(3) + ":" + frac(sec) + "\u2083";
 function drawLed(str, baseY, done, darkNines) {
-  const s = W < 500 ? 15 : 18, gap = Math.round(s * 0.5), cw = Math.round(s * 0.45), r = s * 0.34;
+  const s = W < 500 ? 20 : 24, gap = Math.round(s * 0.5), cw = Math.round(s * 0.45), r = s * 0.34;
   const nd = str.replace(":", "").length;               // digits; one colon
   let x = W / 2 - (nd * s + cw + nd * gap) / 2;
   const cy = baseY - s;
@@ -395,15 +395,18 @@ function drawLed(str, baseY, done, darkNines) {
     }
     for (let k = 0; k < 2; k++) {
       const ly = cy + (k === 0 ? s * 0.55 : -s * 0.55), cx = x + s / 2;
+      // the minutes (the first three places) burn red, the fractions white
+      // (amber after the bell)
+      const red = i < 3;
       if (+ch > k) {
-        ctx.fillStyle = done ? "rgba(255,177,74,0.22)" : "rgba(225,238,255,0.22)";
+        ctx.fillStyle = red ? "rgba(255,90,70,0.25)" : done ? "rgba(255,177,74,0.22)" : "rgba(225,238,255,0.22)";
         ctx.beginPath(); ctx.arc(cx, ly, r * 1.9, 0, 7); ctx.fill();
         const lg = ctx.createRadialGradient(cx, ly, 0, cx, ly, r);
-        lg.addColorStop(0, done ? "#ffb14a" : "#fff"); lg.addColorStop(1, done ? "#b87724" : "#c8d8ec");
+        lg.addColorStop(0, red ? "#ff6a52" : done ? "#ffb14a" : "#fff"); lg.addColorStop(1, red ? "#b3301f" : done ? "#b87724" : "#c8d8ec");
         ctx.fillStyle = lg;
-      } else ctx.fillStyle = "#14181f";
+      } else ctx.fillStyle = "#262d39";
       ctx.beginPath(); ctx.arc(cx, ly, r, 0, 7); ctx.fill();
-      if (+ch <= k) { ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1; ctx.stroke(); }
+      if (+ch <= k) { ctx.strokeStyle = "rgba(255,255,255,0.32)"; ctx.lineWidth = 1; ctx.stroke(); }
     }
     x += s + gap;
   }

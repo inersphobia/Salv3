@@ -75,7 +75,7 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
 The time is base 3. Below the square, the readout has three places for the
 minute of the session (000 to 222), a colon, then four places for thirds,
 ninths, 27ths and 81sts of a minute. Each digit is two lamps: none lit is
-0, one is 1, two is 2. Above the square, three lamps labelled 100,
+0, one is 1, two is 2. The minute lamps burn red, the fractions white. Above the square, three lamps labelled 100,
 200 and 1000 (9, 18 and 27 minutes) are always shown, but they light
 only in the three-light view: there each turns amber as its nine minutes
 finish, standing in for the readout's nines digit, which stays dark.
