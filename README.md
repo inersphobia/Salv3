@@ -42,9 +42,7 @@ It has no build step and no dependencies: one `index.html`, a manifest and a ser
   The 100 / 200 / 1000 lamps belong to SQUARE and are hidden in SEPT, STAR
   and HEPTA, which show the nines themselves.
   With SEPT, STAR or HEPTA chosen, the menu also offers **LIGHT**: WHITE (amber
-  only once the bell has rung) or AMBER the whole time. In warm light the
-  star's lamps tell 1 from 2: a place holding 1 burns deep amber, a place
-  holding 2 pale gold (core and tip). STAR and HEPTA also offer
+  only once the bell has rung) or AMBER the whole time. STAR and HEPTA also offer
   **CIRCUITS**: ALL wires every place; MINUTES wires only the 9s, 3s, 1s
   and the 27 lamp, and the seconds' lamps just count. A new install
   starts on HEPTA with AMBER light. Below that, **MINUTES** shows the glyph

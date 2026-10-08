@@ -166,7 +166,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v29";
+const VERSION = "v30";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone", K_CIRC = "sq.circ";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -439,17 +439,14 @@ let design = ["square", "sept", "star"].includes(load(K_DESIGN, "hepta")) ? load
 let sepTone = load(K_TONE, "amber") === "white" ? "white" : "amber";
 // STAR and HEPTA wire every place, or only the minutes (the seconds just count)
 let circ = load(K_CIRC, "all") === "min" ? "min" : "all";
-// tone, for warm star lamps: 1 burns deep amber, 2 pale gold
-function septLamp(x, y, r, on, done, bright, tone) {
+function septLamp(x, y, r, on, done, bright) {
   if (on) {
-    const halo = tone === 2 ? "255,224,138" : tone === 1 ? "255,138,30" : done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
+    const halo = done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
     const h = ctx.createRadialGradient(x, y, r * 0.8, x, y, hr);
     h.addColorStop(0, `rgba(${halo},${bright ? 0.6 : 0.35})`); h.addColorStop(1, `rgba(${halo},0)`);
     ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, hr, 0, 7); ctx.fill();
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    if (tone === 2) { g.addColorStop(0, "#fff0c0"); g.addColorStop(1, "#d9b25a"); }
-    else if (tone === 1) { g.addColorStop(0, "#ff9a3a"); g.addColorStop(1, "#a8500c"); }
-    else { g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec"); }
+    g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec");
     ctx.fillStyle = g;
   } else ctx.fillStyle = "#14181f";
   ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
@@ -570,10 +567,10 @@ function drawStar(s, obtuse) {
   cc.addColorStop(1, `rgba(200,140,60,${0.55 + 0.45 * f})`);
   ctx.fillStyle = cc; ctx.beginPath(); ctx.arc(CX, CY, cr, 0, 7); ctx.fill();
   for (let k = 0; k < 7; k++) {
-    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k], warm && d[k]);
-    septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm, false, warm && 2);
+    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k]);
+    septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm);
   }
-  septLamp(N.X[0], N.X[1], r * 1.15, x >= 1, warm, !!lone.X, warm && 1);
+  septLamp(N.X[0], N.X[1], r * 1.15, x >= 1, warm, !!lone.X);
 }
 
 /* ---------- FRAME ---------- */
