@@ -166,7 +166,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v32";
+const VERSION = "v33";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone", K_CIRC = "sq.circ";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -404,9 +404,9 @@ function drawLed(str, baseY, done, darkNines) {
         const lg = ctx.createRadialGradient(cx, ly, 0, cx, ly, r);
         lg.addColorStop(0, red ? "#ff6a52" : done ? "#ffb14a" : "#fff"); lg.addColorStop(1, red ? "#b3301f" : done ? "#b87724" : "#c8d8ec");
         ctx.fillStyle = lg;
-      } else ctx.fillStyle = "#262d39";
+      } else ctx.fillStyle = red ? "#4a221d" : "#36404d";
       ctx.beginPath(); ctx.arc(cx, ly, r, 0, 7); ctx.fill();
-      if (+ch <= k) { ctx.strokeStyle = "rgba(255,255,255,0.32)"; ctx.lineWidth = 1; ctx.stroke(); }
+      if (+ch <= k) { ctx.strokeStyle = red ? "rgba(255,105,85,0.95)" : "rgba(205,220,240,0.6)"; ctx.lineWidth = 1.5; ctx.stroke(); }
     }
     x += s + gap;
   }
@@ -453,9 +453,9 @@ function septLamp(x, y, r, on, done, bright, red) {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, red ? "#ff6a52" : done ? "#ffb14a" : "#fff"); g.addColorStop(1, red ? "#b3301f" : done ? "#b87724" : "#c8d8ec");
     ctx.fillStyle = g;
-  } else ctx.fillStyle = red ? "#2e1c1c" : "#222935";
+  } else ctx.fillStyle = red ? "#4a221d" : "#36404d";
   ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
-  if (!on) { ctx.strokeStyle = red ? "rgba(255,110,90,0.55)" : "rgba(255,255,255,0.3)"; ctx.lineWidth = red ? 1.5 : 1; ctx.stroke(); }
+  if (!on) { ctx.strokeStyle = red ? "rgba(255,105,85,0.95)" : "rgba(205,220,240,0.6)"; ctx.lineWidth = 2; ctx.stroke(); }
 }
 function drawSept(s) {
   const S = L.side, X0 = L.x0, Y0 = L.y0, r = S * 0.026, live = !!run, done = s.done;
