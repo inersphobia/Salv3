@@ -135,6 +135,8 @@
   <div class="designs"><button data-d="square">SQUARE</button><button data-d="sept">SEPT</button><button data-d="star">STAR</button><button data-d="hepta">HEPTA</button></div>
   <div class="title" id="toneTitle">LIGHT</div>
   <div class="tones" id="tones"><button data-t="white">WHITE</button><button data-t="amber">AMBER</button></div>
+  <div class="title" id="circTitle">CIRCUITS</div>
+  <div class="tones" id="circs"><button data-c="all">ALL</button><button data-c="min">MINUTES</button></div>
   <div class="title">MINUTES</div>
   <div class="mins" id="mins"></div>
 </div></div>
@@ -164,9 +166,9 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v28";
+const VERSION = "v29";
 /* ---------- STORAGE ---------- */
-const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
+const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone", K_CIRC = "sq.circ";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
@@ -435,14 +437,19 @@ function drawNines(el, y, lit) {
 let design = ["square", "sept", "star"].includes(load(K_DESIGN, "hepta")) ? load(K_DESIGN, "hepta") : "hepta";
 // SEPT's lamps burn white until the bell, or amber the whole time
 let sepTone = load(K_TONE, "amber") === "white" ? "white" : "amber";
-function septLamp(x, y, r, on, done, bright) {
+// STAR and HEPTA wire every place, or only the minutes (the seconds just count)
+let circ = load(K_CIRC, "all") === "min" ? "min" : "all";
+// tone, for warm star lamps: 1 burns deep amber, 2 pale gold
+function septLamp(x, y, r, on, done, bright, tone) {
   if (on) {
-    const halo = done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
+    const halo = tone === 2 ? "255,224,138" : tone === 1 ? "255,138,30" : done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
     const h = ctx.createRadialGradient(x, y, r * 0.8, x, y, hr);
     h.addColorStop(0, `rgba(${halo},${bright ? 0.6 : 0.35})`); h.addColorStop(1, `rgba(${halo},0)`);
     ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, hr, 0, 7); ctx.fill();
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec");
+    if (tone === 2) { g.addColorStop(0, "#fff0c0"); g.addColorStop(1, "#d9b25a"); }
+    else if (tone === 1) { g.addColorStop(0, "#ff9a3a"); g.addColorStop(1, "#a8500c"); }
+    else { g.addColorStop(0, done ? "#ffb14a" : "#fff"); g.addColorStop(1, done ? "#b87724" : "#c8d8ec"); }
     ctx.fillStyle = g;
   } else ctx.fillStyle = "#14181f";
   ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
@@ -521,7 +528,9 @@ function drawStar(s, obtuse) {
   // spike's tip and overflow wire if it holds 2, or along the heptagon edge
   // between their cores if it holds 1. (The nines reach the 27 lamp only
   // through their tip: no heptagon edge runs there.)
-  const joins = k => { const nx = k === 0 ? "X" : upPlace(k); return d[k] >= 1 && val(nx) >= 1 && (d[k] === 2 || nx !== "X"); };
+  // with CIRCUITS: MINUTES only the 9s, 3s, 1s and the 27 lamp are wired
+  const wired = k => circ === "all" || k === "X" || k <= 2;
+  const joins = k => { const nx = k === 0 ? "X" : upPlace(k); return wired(k) && d[k] >= 1 && val(nx) >= 1 && (d[k] === 2 || nx !== "X"); };
   for (let k = 0; k < 7; k++) {
     const nx = k === 0 ? "X" : upPlace(k), j = joins(k);
     // the heptagon edge: lit while it carries current between two cores. The
@@ -533,7 +542,8 @@ function drawStar(s, obtuse) {
     // overflow: lit while current flows from a full spike's tip into the next lit core
     const conducts = j && d[k] === 2;
     wire(N["T" + k], N[core(nx)], conducts ? LIT_C : WIRE_C, conducts ? 2.5 : 1.6);
-    wire(N["I" + k], N["T" + k], d[k] === 2 ? LIT_C : WIRE_C, d[k] === 2 ? 2.5 : 1.6);   // fill
+    const full = wired(k) && d[k] === 2;
+    wire(N["I" + k], N["T" + k], full ? LIT_C : WIRE_C, full ? 2.5 : 1.6);   // fill
   }
   // the leads: lit lamps joined by conducting wires form a circuit, closed
   // through the centre. A single LED's circuit is one red lead (and the lamp
@@ -542,7 +552,7 @@ function drawStar(s, obtuse) {
   // nothing lit beyond. The cores between are fed in series.
   const RED = "rgba(255,90,70,0.9)", ORANGE = "rgba(255,165,70,0.85)", lone = {};
   chain.forEach((k, i) => {
-    const v = val(k); if (v < 1) return;
+    const v = val(k); if (v < 1 || !wired(k)) return;
     const prev = chain[i - 1], next = chain[i + 1];
     const first = prev === undefined || !joins(prev);           // nothing feeds it from below
     const last = next === undefined || !joins(k);               // it feeds nothing above
@@ -551,7 +561,7 @@ function drawStar(s, obtuse) {
     if (last) wire(N.C, N[v === 2 ? "T" + k : core(k)], ORANGE, 1.6);
   });
   // the centre: the source - bigger, and brighter for every lamp it powers
-  const f = (d.reduce((a, v) => a + v, 0) + x) / 15, cr = r * 0.85, gr = cr * (2 + 3.5 * f);
+  const f = (d.reduce((a, v, k) => a + (wired(k) ? v : 0), 0) + x) / (circ === "all" ? 15 : 7), cr = r * 0.85, gr = cr * (2 + 3.5 * f);
   const cg = ctx.createRadialGradient(CX, CY, cr * 0.5, CX, CY, gr);
   cg.addColorStop(0, `rgba(255,200,120,${0.25 + 0.55 * f})`); cg.addColorStop(1, "rgba(255,170,60,0)");
   ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(CX, CY, gr, 0, 7); ctx.fill();
@@ -560,10 +570,10 @@ function drawStar(s, obtuse) {
   cc.addColorStop(1, `rgba(200,140,60,${0.55 + 0.45 * f})`);
   ctx.fillStyle = cc; ctx.beginPath(); ctx.arc(CX, CY, cr, 0, 7); ctx.fill();
   for (let k = 0; k < 7; k++) {
-    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k]);
-    septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm);
+    septLamp(N["I" + k][0], N["I" + k][1], r, d[k] >= 1, warm, !!lone[k], warm && d[k]);
+    septLamp(N["T" + k][0], N["T" + k][1], r, d[k] >= 2, warm, false, warm && 2);
   }
-  septLamp(N.X[0], N.X[1], r * 1.15, x >= 1, warm, !!lone.X);
+  septLamp(N.X[0], N.X[1], r * 1.15, x >= 1, warm, !!lone.X, warm && 1);
 }
 
 /* ---------- FRAME ---------- */
@@ -608,6 +618,8 @@ function sync() {
   for (const b of document.querySelectorAll(".designs button")) b.classList.toggle("on", b.dataset.d === design);
   for (const b of $("tones").children) b.classList.toggle("on", b.dataset.t === sepTone);
   $("toneTitle").style.display = $("tones").style.display = design === "square" ? "none" : "";
+  for (const b of $("circs").children) b.classList.toggle("on", b.dataset.c === circ);
+  $("circTitle").style.display = $("circs").style.display = design === "star" || design === "hepta" ? "" : "none";
   $("playIcon").setAttribute("d", isRunning() && !done ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M8 5v14l11-7z");
   $("bPlay").setAttribute("aria-label", isRunning() ? "Pause" : idle ? "Start" : "Resume");
   $("bPlay").disabled = done;
@@ -633,6 +645,7 @@ $("bMenu").onclick = () => {
   $("menu").classList.toggle("on", open); $("bMenu").classList.toggle("open", open);
 };
 for (const b of $("tones").children) b.onclick = () => { sepTone = b.dataset.t; save(K_TONE, sepTone); sync(); };
+for (const b of $("circs").children) b.onclick = () => { circ = b.dataset.c; save(K_CIRC, circ); sync(); };
 for (const b of document.querySelectorAll(".designs button")) b.onclick = () => {
   design = b.dataset.d; save(K_DESIGN, design);
   minutes(); sync();
