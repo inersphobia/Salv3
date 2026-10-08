@@ -166,7 +166,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v34";
+const VERSION = "v35";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone", K_CIRC = "sq.circ";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -404,9 +404,10 @@ function drawLed(str, baseY, done, darkNines) {
         const lg = ctx.createRadialGradient(cx, ly, 0, cx, ly, r);
         lg.addColorStop(0, red ? "#ff6a52" : done ? "#ffb14a" : "#fff"); lg.addColorStop(1, red ? "#b3301f" : done ? "#b87724" : "#c8d8ec");
         ctx.fillStyle = lg;
-      } else ctx.fillStyle = red ? "#4a221d" : "#36404d";
+      } else ctx.fillStyle = red ? "#1c1416" : "#36404d";
       ctx.beginPath(); ctx.arc(cx, ly, r, 0, 7); ctx.fill();
-      if (+ch <= k) { ctx.strokeStyle = red ? "rgba(255,105,85,0.95)" : "rgba(205,220,240,0.6)"; ctx.lineWidth = 1.5; ctx.stroke(); }
+      // a dark minute lamp is a white ring on near-black: nothing like a lit red one
+      if (+ch <= k) { ctx.strokeStyle = red ? "rgba(255,255,255,0.95)" : "rgba(205,220,240,0.6)"; ctx.lineWidth = red ? 2 : 1.5; ctx.stroke(); }
     }
     x += s + gap;
   }
