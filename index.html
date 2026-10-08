@@ -43,6 +43,15 @@
     background: #241d10; color: #ffc478; box-shadow: inset 0 0 0 1px rgba(255,170,60,0.85);
     display: flex; align-items: center; justify-content: center; }
   #bMenu svg { width: 22px; height: 22px; fill: currentColor; }
+  #bMenu.open { z-index: 11; background: #3a2c12; }
+  #menu { align-items: flex-start; padding-top: calc(60px + env(safe-area-inset-top)); }
+  #menu .box { max-height: 100%; overflow-y: auto; }
+  .mins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .mins div { text-align: center; padding: 4px 0 6px; border-radius: 8px; background: #0d1219; }
+  .mins canvas { display: block; width: 72px; height: 78px; margin: 0 auto; }
+  .mins b { display: block; font: bold 13px monospace; letter-spacing: 1px; color: #ffc478; }
+  .mins small { display: block; font: 10px monospace; color: var(--dim); }
+  .tones + .title { margin-top: 16px; }
   .designs { display: flex; flex-direction: column; gap: 8px; }
   .designs button, .tones button { background: #10141c; color: var(--dim); border: 1px solid rgba(0,191,255,0.25);
     font: bold 14px monospace; letter-spacing: 3px; }
@@ -126,6 +135,8 @@
   <div class="designs"><button data-d="square">SQUARE</button><button data-d="sept">SEPT</button><button data-d="star">STAR</button><button data-d="hepta">HEPTA</button></div>
   <div class="title" id="toneTitle">LIGHT</div>
   <div class="tones" id="tones"><button data-t="white">WHITE</button><button data-t="amber">AMBER</button></div>
+  <div class="title">MINUTES</div>
+  <div class="mins" id="mins"></div>
 </div></div>
 
 <div class="card" id="verdict"><div class="box">
@@ -153,7 +164,7 @@
 "use strict";
 // Shown under LOGS, so the phone can say which release it is running.
 // Bump it with the cache name in sw.js on every release.
-const VERSION = "v27";
+const VERSION = "v28";
 /* ---------- STORAGE ---------- */
 const K_RUN = "sq.run", K_LOG = "sq.sessions", K_VIEW = "sq.view", K_DESIGN = "sq.design", K_TONE = "sq.tone";
 const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
@@ -230,7 +241,7 @@ function finishReset(rating) {
    for start / pause / reset / save, and a long pattern for the bell. */
 const BUZZ = { light: 10, medium: 35, heavy: [60, 40, 60, 40, 120] };
 const buzz = k => { try { if (navigator.vibrate) navigator.vibrate(BUZZ[k]); } catch (e) {} };
-const FIRM = new Set(["bPlay", "bReset", "vSave"]);
+const FIRM = new Set(["bPlay", "bReset", "vSave", "bMenu"]);
 // capture: buzz as the press lands, before the button's own handler runs
 // (reset disables itself, which would otherwise read as a dead button)
 document.addEventListener("click", e => {
@@ -421,9 +432,9 @@ function drawNines(el, y, lit) {
    on a line between them three lamps carry the nines. As in the old
    Septagram, one lamp burns per figure and the digit says which: its
    first corner for 0, its second for 1, its third for 2. */
-let design = ["sept", "star", "hepta"].includes(load(K_DESIGN, "square")) ? load(K_DESIGN, "square") : "square";
+let design = ["square", "sept", "star"].includes(load(K_DESIGN, "hepta")) ? load(K_DESIGN, "hepta") : "hepta";
 // SEPT's lamps burn white until the bell, or amber the whole time
-let sepTone = load(K_TONE, "white") === "amber" ? "amber" : "white";
+let sepTone = load(K_TONE, "amber") === "white" ? "white" : "amber";
 function septLamp(x, y, r, on, done, bright) {
   if (on) {
     const halo = done ? "255,177,74" : "225,238,255", hr = r * (bright ? 4.4 : 3.2);
@@ -608,12 +619,23 @@ $("bView").onclick = () => {
   if (L) { L = layout(); dimPlate = litPlate = null; litN = 0; }
   sync();
 };
-$("bMenu").onclick = () => $("menu").classList.add("on");
-$("menu").onclick = e => { if (e.target === $("menu")) $("menu").classList.remove("on"); };
+// the menu opens and closes only by its own key
+function minutes() {
+  $("mins").innerHTML = Array.from({ length: 27 }, (_, i) => {
+    const m = i + 1;
+    return `<div><canvas data-m="${m}"></canvas><b>${m.toString(3).padStart(3, "0")}</b><small>${m} min</small></div>`;
+  }).join("");
+  for (const c of $("mins").children) { const cv = c.firstChild; scoreGlyph(cv, +cv.dataset.m * 81, 72, 78); }
+}
+$("bMenu").onclick = () => {
+  const open = !$("menu").classList.contains("on");
+  if (open) minutes();
+  $("menu").classList.toggle("on", open); $("bMenu").classList.toggle("open", open);
+};
 for (const b of $("tones").children) b.onclick = () => { sepTone = b.dataset.t; save(K_TONE, sepTone); sync(); };
 for (const b of document.querySelectorAll(".designs button")) b.onclick = () => {
   design = b.dataset.d; save(K_DESIGN, design);
-  $("menu").classList.remove("on"); sync();
+  minutes(); sync();
 };
 $("bPlay").onclick = () => isRunning() ? pause() : start();
 $("bReset").onclick = () => {
